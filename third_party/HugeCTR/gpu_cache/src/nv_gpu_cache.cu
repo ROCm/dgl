@@ -382,7 +382,10 @@ __global__ void get_kernel(const key_type* d_keys, const size_t len, float* d_va
 
   // After warp_tile complete the working queue, save the result for output
   // First thread of the warp_tile accumulate the missing length to global variable
-  size_t warp_position;
+  // TODO(nod-ai/dgl#14): clang miscompiles if this isn't initialized even
+  // though the shfl instructions are marked with maybe_undef. Figure out
+  // whether this is indeed a clang bug and remove this initialization.
+  size_t warp_position = 0;
   if (lane_idx == 0) {
     warp_position = atomicAdd(d_missing_len, (size_t)warp_missing_counter);
   }
@@ -527,8 +530,9 @@ __global__ void get_kernel(const key_type* d_keys, const size_t len, float* d_va
 
   // After warp_tile complete the working queue, save the result for output
   // First thread of the warp_tile accumulate the missing length to global
-  // variable TODO(nod-ai/dgl#14): clang miscompiles if this isn't initialized
-  // even though the shfl instructions are marked with maybe_undef. Figure out
+  // variable.
+  // TODO(nod-ai/dgl#14): clang miscompiles if this isn't initialized even
+  // though the shfl instructions are marked with maybe_undef. Figure out
   // whether this is indeed a clang bug and remove this initialization.
   size_t warp_position = 0;
   if (lane_idx == 0) {
