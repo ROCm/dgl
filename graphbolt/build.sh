@@ -40,12 +40,15 @@ declare -a CMAKE_FLAGS=(
   "-DCUDA_TOOLKIT_ROOT_DIR=${CUDA_TOOLKIT_ROOT_DIR}" 
   "-DROCM_ROOT=${ROCM_PATH}" 
   "-DTORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST}" 
-  "-DUSE_ROCM=${USE_ROCM}" 
+  "-DUSE_ROCM=${USE_ROCM}"
+  "-DGPU_TARGETS=${GPU_TARGETS:-}"
+  "-DAMDGPU_TARGETS=${AMDGPU_TARGETS:-}"
+  "-DCMAKE_HIP_ARCHITECTURES=${CMAKE_HIP_ARCHITECTURES:-}"
   "-DUSE_CUDA=${USE_CUDA}" 
 )
 
 export PATH="${PATH}:${ROCM_PATH}/lib/llvm/bin/"
-echo "graphbolt cmake flags: ${CMAKE_FLAGS}"
+echo "graphbolt cmake flags: ${CMAKE_FLAGS[@]}"
 
 if [ $# -eq 0 ]; then
   "${CMAKE_COMMAND}" "${CMAKE_FLAGS[@]}" "${GRAPHBOLT_SRCDIR}"

@@ -8,11 +8,16 @@ if(USE_CUDA)
   enable_language(CUDA)
   add_definitions(-DGRAPHBOLT_USE_CUDA)
 elseif(USE_ROCM)
+  # Not `cmake_minimum_required` because that sets policies as well and we don't
+  # want to change those in the middle of the configuraiton.
+  if (CMAKE_VERSION VERSION_LESS 3.21)
+    message(FATAL_ERROR "CMake version >= 3.21 is required for ROCm support")
+  endif()
+  enable_language(HIP)
   add_definitions(-DGRAPHBOLT_USE_ROCM)
   add_definitions(-DDGL_USE_ROCM)
   add_definitions(-DHIP_ENABLE_WARP_SYNC_BUILTINS)
   set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} -Wno-instantiation-after-specialization")
-  enable_language(HIP)
   find_package(rocprim)
   find_package(hipcub)
   find_package(libhipcxx)
@@ -191,7 +196,7 @@ if(USE_ROCM)
     ${BOLT_DIR}/cuda/extension/*.cu
     ${BOLT_DIR}/cuda/extension/*.cc
     ../third_party/HugeCTR/gpu_cache/src/nv_gpu_cache.cu
-    )
+  )
   set_source_files_properties(${BOLT_CUDA_EXTENSION_SRC} PROPERTIES LANGUAGE HIP)
   add_library(${LIB_GRAPHBOLT_ROCM_NAME} STATIC ${BOLT_CUDA_EXTENSION_SRC} ${BOLT_HEADERS})
   target_link_libraries(${LIB_GRAPHBOLT_ROCM_NAME} PUBLIC "${TORCH_LIBRARIES}")

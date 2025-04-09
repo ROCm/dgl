@@ -20,6 +20,12 @@ message(STATUS "Configuring for PyTorch ${TORCH_VER}")
 if(USE_CUDA)
   add_definitions(-DDGL_USE_CUDA)
 elseif(USE_ROCM)
+  # Not `cmake_minimum_required` because that sets policies as well and we don't
+  # want to change those in the middle of the configuraiton.
+  if (CMAKE_VERSION VERSION_LESS 3.21)
+    message(FATAL_ERROR "CMake version >= 3.21 is required for ROCm support")
+  endif()
+  enable_language(HIP)
   add_definitions(-DDGL_USE_ROCM)
 endif()
 

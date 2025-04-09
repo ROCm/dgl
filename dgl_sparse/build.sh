@@ -20,6 +20,9 @@ declare -a CMAKE_FLAGS=(
     "-DTORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST:-}"
     "-DUSE_CUDA=${USE_CUDA}"
     "-DUSE_ROCM=${USE_ROCM}"
+    "-DGPU_TARGETS=${GPU_TARGETS:-}"
+    "-DAMDGPU_TARGETS=${AMDGPU_TARGETS:-}"
+    "-DCMAKE_HIP_ARCHITECTURES=${CMAKE_HIP_ARCHITECTURES:-}"
     "-DEXTERNAL_DMLC_LIB_PATH=${EXTERNAL_DMLC_LIB_PATH:-}"
     # CMake passes in the list of directories separated by spaces.  Here we
     # replace them with semicolons.
