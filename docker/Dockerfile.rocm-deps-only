@@ -1,0 +1,117 @@
+# Docker container for building and running DGL on AMD GPUs with ROCM. Includes
+# only the dependencies of DGL on ROCm, including the necessary compiler tools,
+# but does not include DGL itself.
+
+# The image creation here diverges from the way the other DGL images are built
+# because it inherits from the pytorch/rocm image, which has already made some
+# opinionated decisions about conda usage and installed PyTorch itself.
+
+# TODO: This image is quite large. Consider multistage builds.
+# See also https://github.com/ROCm/ROCm-docker/issues/120
+# I can't find the actual Dockerfile for this image, but it appears to inherit
+# from
+# https://github.com/pytorch/pytorch/blob/main/.ci/docker/ubuntu-rocm/Dockerfile
+# and then install PyTorch itself.
+FROM rocm/pytorch:rocm6.3.3_ubuntu22.04_py3.10_pytorch_release_2.4.0
+
+# The rocm/pytorch image already has a conda environment and it has been added
+# to the PATH but not really activated via conda's own mechanisms. This seems to
+# not matter in practice and the image more or less behaves like conda has been
+# activated except that conda itself says that no environment is active. The
+# Conda environment is also for some reason owned by the user jenkins, but then
+# the rocm pytorch image has installed some packages as root there, so we have
+# to be root for the rest of the docker build also, even though it makes pip
+# complain.
+
+RUN pip install \
+        --find-links https://download.pytorch.org/whl/torch_stable.html \
+        torcheval \
+        torchmetrics \
+        torch_geometric \
+        cython \
+        matplotlib \
+        # need networkx.random_labeled_tree
+        'networkx==3.4.2' \
+        nltk \
+        nose \
+        # Require a specific version of the next two to avoid silent pip
+        # dependency resolution failures.
+        'numba>=0.61' \
+        'numpy==1.26' \
+        ogb \
+        pandas \
+        psutil \
+        pydantic \
+        pytest \
+        pyyaml \
+        rdflib \
+        'requests[security]==2.28' \
+        scikit-learn \
+        scipy \
+        tqdm
+
+# Clang for compiling DGL
+# We need https://github.com/llvm/llvm-project/pull/93976
+WORKDIR /install-llvm
+RUN wget https://apt.llvm.org/llvm.sh \
+    && chmod +x llvm.sh \
+    && ./llvm.sh 19 \
+    && apt-get update \
+    && apt-get install -y libomp-19-dev \
+    && rm -rf /install-llvm
+
+ENV CC=/usr/bin/clang-19
+ENV CXX=/usr/bin/clang++-19
+
+# Patch ROCM headers with a couple of rocPrim fixes/additions needed by various consumers.
+# ROCm is for DeviceCopy.
+# StreamHPC is for select features.
+WORKDIR /patch-rocm
+RUN apt-get update \
+  && apt-get install -y patchutils \
+  && wget https://patch-diff.githubusercontent.com/raw/ROCm/rocPRIM/pull/662.patch \
+  && wget https://github.com/StreamHPC/rocPRIM/commit/4dde14b4a4fa7d32123ff01034f608afa5b38c8b.patch \
+  && cd /opt/rocm/ \
+  && filterdiff /patch-rocm/662.patch --strip-match=2 --strip=2 -i 'include/*' | patch -p0 \
+  && filterdiff /patch-rocm/4dde14b4a4fa7d32123ff01034f608afa5b38c8b.patch --strip-match=2 --strip=2 -i 'include/*' | patch -p0 \
+  && rm -rf /patch-rocm
+
+# By default, build for all the architectures that are supported by
+# hipCollections, which is somewhat limited. See
+# https://github.com/rocm/hipCollections/blob/b1cd36f600/CMakeLists.txt#L82 This
+# is a subset of the architectures that the ROCm PyTorch image was built for.
+# HIP has a bunch of different variables it might use to decide which
+# architectures to use and honestly I'm not exactly clear on when each is used.
+# Some of them not being set causes warnings that are maybe false alarms, but
+# maybe not. We just try to set all of them. See
+# https://rocm.docs.amd.com/en/latest/conceptual/cmake-packages.html
+
+ARG GPU_TARGETS="gfx908;gfx90a;gfx940;gfx941;gfx942"
+# ARG is only scoped to this build, so we also declare with ENV
+ENV GPU_TARGETS="${GPU_TARGETS}"
+ENV PYTORCH_ROCM_ARCH="${GPU_TARGETS}"
+ENV AMDGPU_TARGETS="${GPU_TARGETS}"
+ENV CMAKE_HIP_ARCHITECTURES="${GPU_TARGETS}"
+
+# Gather additional or updated ROCm libraries
+WORKDIR /git
+RUN (git clone https://github.com/tpopp/hipCUB.git && cd hipCUB && git checkout f342111197dd020f1c4210b16aa550b08992e97b \
+      && mkdir build && cd build \
+      && cmake -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" -DCMAKE_INSTALL_PREFIX=/opt/rocm .. \
+      && make install) \
+    && (git clone https://github.com/ROCm/libhipcxx.git && cd libhipcxx && git checkout v2.2.0 \
+      && mkdir build && cd build \
+      && cmake -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" -DCMAKE_INSTALL_PREFIX=/opt/rocm .. \
+      && make install ) \
+    && (git clone https://github.com/tpopp/hipCollections.git && cd hipCollections && git checkout 6e31da8fd309f229d28adde8583a30bb4efaf1b7 \
+      && mkdir build && cd build \
+      && cmake -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" -DCMAKE_INSTALL_PREFIX=/opt/rocm -DINSTALL_CUCO=ON -DBUILD_TESTS=OFF -DBUILD_BENCHMARKS=OFF -DBUILD_EXAMPLES=OFF -DCMAKE_HIP_ARCHITECTURES="${GPU_TARGETS}" .. \
+      && make install ) \
+    && (git clone https://github.com/tpopp/rocThrust.git && cd rocThrust && git checkout 613db9a025709fb18f2a676543a17850bd231b04 \
+      && mkdir build && cd build \
+      && cmake -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" -DCMAKE_INSTALL_PREFIX=/opt/rocm .. \
+      && make install ) \
+    && rm -rf /git
+
+# The ROCM backend is only tested for pytorch.
+ENV DGLBACKEND=pytorch

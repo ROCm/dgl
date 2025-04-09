@@ -1,0 +1,68 @@
+# Docker container for running DGL on AMD GPUs with ROCM, including DGL itself.
+
+# TODO: Rebuilding DGL is slow. Consider multistage builds and shared cache
+# mounts.
+
+FROM gcmn/dgl:rocm-deps-only
+
+# By default, build for whatever architectures were used in the parent image,
+# falling back to those supported by hip collections. Building for multiple
+# archictectures dramatically slows down a subsequent DGL build, especially of
+# graphbolt, but if we want a single image that "just works" for users, then I
+# think this is what we have to do :-/
+
+ARG GPU_TARGETS="${GPU_TARGETS:-gfx908;gfx90a;gfx940;gfx941;gfx942}"
+# ARG is only scoped to this build, so we also declare with ENV
+ENV GPU_TARGETS="${GPU_TARGETS}"
+ENV PYTORCH_ROCM_ARCH="${GPU_TARGETS}"
+ENV AMDGPU_TARGETS="${GPU_TARGETS}"
+ENV CMAKE_HIP_ARCHITECTURES="${GPU_TARGETS}"
+
+ENV DGL_HOME=/var/lib/jenkins/dgl
+ENV DGLBACKEND=pytorch
+WORKDIR "${DGL_HOME}"
+# The person building the image needs to make the context the whole DGL worktree
+# at the commit they're interested in. In the happy path of just checking out
+# the `hipify-inplace` branch and building the image, this is as simple as `.`
+# (note we have build directories and such in the .dockerignore). If you're
+# iterating on the Dockerfile itself though, you probably need to copy the
+# repository somewhere else and use that as the context. I tried various other
+# ways to make this more seamless, but Docker is as usual *almost* good but then
+# falls over.
+COPY . ${DGL_HOME}
+
+# Note that if many HIP architectures are enabled, this build can be very slow,
+# especially the build of graphbolt. To make matters worse, Ninja buffers output
+# from each command, but because DGL is constructed with graphbolt as a
+# sub-build re-invoking cmake, it is just considered one command by the CMake
+# parent process and thus the whole output gets buffered. This manifests as the
+# image build looking like it's hanging (usually after completing the build of
+# dgl_sparse). We could switch back to plain make. I'm not sure how parallelism
+# is handled in sub-builds though.
+RUN cmake \
+        -DUSE_ROCM=ON \
+        -DGPU_TARGETS="${GPU_TARGETS}" \
+        -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" \
+        -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" \
+        -DCMAKE_HIP_FLAGS="-Wno-deprecated -Wno-pass-failed -Werror" \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+        -DROCM_WARN_TOOLCHAIN_VAR=OFF \
+        -DCMAKE_C_FLAGS="-Wno-deprecated -Wno-unneeded-internal-declaration -Wno-vla-cxx-extension -Werror" \
+        -DCMAKE_CXX_FLAGS="-Wno-deprecated -Wno-unneeded-internal-declaration -Wno-vla-cxx-extension -Werror" \
+        -DCMAKE_INSTALL_PREFIX=build/install \
+        -DCMAKE_C_COMPILER=/usr/bin/clang-19 \
+        -DCMAKE_CXX_COMPILER=/usr/bin/clang++-19 \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_TYPE=release \
+        -DBUILD_CPP_TEST=ON \
+        -DBUILD_GRAPHBOLT=ON \
+        -DBUILD_SPARSE=ON \
+        -DUSE_LIBXSMM=OFF \
+        -DUSE_OPENMP=ON \
+        -B build \
+        -G Ninja \
+    && cmake --build build \
+    && cd python \
+    && python setup.py install \
+    && python setup.py build_ext --inplace \
+    && cd ..
