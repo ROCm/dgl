@@ -15,9 +15,9 @@
 FROM rocm/pytorch:rocm6.3.3_ubuntu22.04_py3.10_pytorch_release_2.4.0
 
 # The rocm/pytorch image already has a conda environment and it has been added
-# to the PATH but not really activated via conda's own mechanisms. This seems to
-# not matter in practice and the image more or less behaves like conda has been
-# activated except that conda itself says that no environment is active. The
+# to the PATH but not really activated via Conda's own mechanisms. This seems to
+# not matter in practice and the image more or less behaves like Conda has been
+# activated except that Conda itself says that no environment is active. The
 # Conda environment is also for some reason owned by the user jenkins, but then
 # the rocm pytorch image has installed some packages as root there, so we have
 # to be root for the rest of the docker build also, even though it makes pip
@@ -63,9 +63,22 @@ RUN wget https://apt.llvm.org/llvm.sh \
 ENV CC=/usr/bin/clang-19
 ENV CXX=/usr/bin/clang++-19
 
-# Patch ROCM headers with a couple of rocPrim fixes/additions needed by various consumers.
-# ROCm is for DeviceCopy.
-# StreamHPC is for select features.
+
+# Installing ccache here enables us to use it for compiling DGL (and other
+# things) later. The cache can be persisted in either a `RUN` step or `docker
+# run` via a bind mount (https://docs.docker.com/engine/storage/bind-mounts/).
+# The image already has sccache installed, but it's an ancient version that
+# wasn't properly caching very slow DGL compile steps. Upgrading to a new
+# version didn't work either, so I switched to ccache.
+WORKDIR /ccache
+RUN wget https://github.com/ccache/ccache/releases/download/v4.11.2/ccache-4.11.2-linux-x86_64.tar.xz \
+    && tar -xf ccache-4.11.2-linux-x86_64.tar.xz \
+    && mv ccache-4.11.2-linux-x86_64/ccache /opt/cache/bin/ \
+    && rm -rf /ccache
+
+# Patch ROCM headers with a couple of rocPRIM fixes/additions needed by various consumers.
+# - ROCm is for DeviceCopy.
+# - StreamHPC is for device select features.
 WORKDIR /patch-rocm
 RUN apt-get update \
   && apt-get install -y patchutils \
@@ -87,7 +100,8 @@ RUN apt-get update \
 # https://rocm.docs.amd.com/en/latest/conceptual/cmake-packages.html
 
 ARG GPU_TARGETS="gfx908;gfx90a;gfx940;gfx941;gfx942"
-# ARG is only scoped to this build, so we also declare with ENV
+# ARG is only scoped to this build, so we also declare with ENV. We want users
+# of the image to know what these were set to.
 ENV GPU_TARGETS="${GPU_TARGETS}"
 ENV PYTORCH_ROCM_ARCH="${GPU_TARGETS}"
 ENV AMDGPU_TARGETS="${GPU_TARGETS}"
@@ -95,7 +109,19 @@ ENV CMAKE_HIP_ARCHITECTURES="${GPU_TARGETS}"
 
 # Gather additional or updated ROCm libraries
 WORKDIR /git
-RUN (git clone https://github.com/tpopp/hipCUB.git && cd hipCUB && git checkout f342111197dd020f1c4210b16aa550b08992e97b \
+RUN --mount=type=cache,target=/root/.cache/ccache \
+    # We use environment variables rather than CMake defines because they affect
+    # the various sub-builds that DGL spawns without us having to manually
+    # thread that through. And we use `export` rather than `ENV` because we want
+    # to set them for this RUN step, but not spring them upon unwitting users of
+    # image.
+    export CMAKE_C_COMPILER_LAUNCHER=ccache \
+    export CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    export CMAKE_HIP_COMPILER_LAUNCHER=ccache \
+    # We later compile DGL with this sloppiness setting, so using it here to for
+    # consistency.
+    export CCACHE_SLOPPINESS=time_macros \
+    && (git clone https://github.com/tpopp/hipCUB.git && cd hipCUB && git checkout f342111197dd020f1c4210b16aa550b08992e97b \
       && mkdir build && cd build \
       && cmake -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" -DCMAKE_INSTALL_PREFIX=/opt/rocm .. \
       && make install) \
@@ -112,6 +138,8 @@ RUN (git clone https://github.com/tpopp/hipCUB.git && cd hipCUB && git checkout 
       && cmake -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" -DCMAKE_INSTALL_PREFIX=/opt/rocm .. \
       && make install ) \
     && rm -rf /git
+
+WORKDIR /
 
 # The ROCM backend is only tested for pytorch.
 ENV DGLBACKEND=pytorch

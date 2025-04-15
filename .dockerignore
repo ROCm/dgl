@@ -2,12 +2,11 @@
 # invalidations. This isn't comprehensive but knocks out a good chunk of
 # potential invalidations and big files.
 
-# Ignores specific to ROCm
-
-# Submodules we don't use
+# Submodules we don't use for ROCm. Since the ROCm image is the only one that
+# uses the repository as context, exclude these.
 third_party/cccl/
 third_party/libxsmm/
-
+third_party/cuco
 
 # We just need the work tree, not the whole git history
 **/*.git/
@@ -26,7 +25,7 @@ notebooks/
 tools/
 tutorials/
 
-# These third_party/ directories dont' affect the build
+# These third_party/ directories don't affect the build
 **/.github/
 **/docs/
 **/examples/
