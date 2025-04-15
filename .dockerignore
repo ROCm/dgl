@@ -55,9 +55,9 @@ third_party/taskflow/benchmarks/
 
 
 # The rest is a copy of the .gitignore file except that .dockignore has annoying
-# syntax differences with .gitignore: Bare filenames are always taken relative #
+# syntax differences with .gitignore: Bare filenames are always taken relative
 # to the .dockerignore file, not applied everywhere. So if you want to ignore
-# files by extension, you have to do # **/*.md instead of just *.md
+# files by extension, you have to do **/*.md instead of just *.md
 
 # IDE
 .idea

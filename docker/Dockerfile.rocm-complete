@@ -19,7 +19,7 @@ ENV PYTORCH_ROCM_ARCH="${GPU_TARGETS}"
 ENV AMDGPU_TARGETS="${GPU_TARGETS}"
 ENV CMAKE_HIP_ARCHITECTURES="${GPU_TARGETS}"
 
-ENV DGL_HOME=/var/lib/jenkins/dgl
+ENV DGL_HOME=/root/dgl
 ENV DGLBACKEND=pytorch
 WORKDIR "${DGL_HOME}"
 # The person building the image needs to make the context the whole DGL worktree
@@ -56,6 +56,15 @@ RUN --mount=type=cache,target=/root/.cache/ccache \
     # don't actually care about incorporating the exact time of compilation, so
     # tell ccache to be sloppy about it.
     export CCACHE_SLOPPINESS=time_macros \
+    # Share the cache with builds that might be run as a different user.
+    # Everything running as docker basically has root anyways, so I don't think
+    # there are any (additional) security concerns.
+    export CCACHE_UMASK=000 \
+    # Rewrite paths under this directory to be relative, enabling more cache
+    # hits for builds in different directories.
+    export CCACHE_BASEDIR=/root \
+    # Write stats to a separate log so we can get the stats for just this build.
+    export CCACHE_STATSLOG="/tmp/ccache-stats.log" \
     && cmake \
         -DUSE_ROCM=ON \
         -DGPU_TARGETS="${GPU_TARGETS}" \
@@ -77,8 +86,8 @@ RUN --mount=type=cache,target=/root/.cache/ccache \
         -B build \
         -G Ninja \
     && cmake --build build \
-    && ccache -vvv --show-stats \
+    && ccache -vvv --show-log-stats \
+    && rm "${CCACHE_STATSLOG}" \
     && cd python \
     && python setup.py install \
-    && python setup.py build_ext --inplace \
-    && cd ..
+    && python setup.py build_ext --inplace

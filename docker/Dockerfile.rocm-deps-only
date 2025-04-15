@@ -14,16 +14,30 @@
 # and then install PyTorch itself.
 FROM rocm/pytorch:rocm6.3.3_ubuntu22.04_py3.10_pytorch_release_2.4.0
 
-# The rocm/pytorch image already has a conda environment and it has been added
+# Clean up base image 
+
+# The Ubuntu base image includes this configuration which avoids apt caching and
+# deletes caches that do somehow get created. This is probably a good default
+# for Docker, but since we're using external cache mounts we dont' want this.
+RUN rm /etc/apt/apt.conf.d/docker-clean
+
+# Setting DEBIAN_FRONTEND with ENV is actually discouraged because it is
+# unnecessary and carries forward to interactive usage of the container
+# (https://github.com/moby/moby/issues/4032#issuecomment-34597177). Set it back
+# to the default (https://www.debian.org/releases/stable/amd64/ch05s03.en.html).
+ENV DEBIAN_FRONTEND=newt
+
+# The rocm/pytorch image already has a Conda environment and it has been added
 # to the PATH but not really activated via Conda's own mechanisms. This seems to
 # not matter in practice and the image more or less behaves like Conda has been
 # activated except that Conda itself says that no environment is active. The
-# Conda environment is also for some reason owned by the user jenkins, but then
-# the rocm pytorch image has installed some packages as root there, so we have
-# to be root for the rest of the docker build also, even though it makes pip
-# complain.
+# Conda environment was created as the user jenkins (I think for PyTorch CI),
+# but then the rocm/pytorch image has installed some packages as root there, so
+# we have to be root for the rest of the docker build also, even though it makes
+# pip complain.
 
-RUN pip install \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install \
         --find-links https://download.pytorch.org/whl/torch_stable.html \
         torcheval \
         torchmetrics \
@@ -52,17 +66,20 @@ RUN pip install \
 
 # Clang for compiling DGL
 # We need https://github.com/llvm/llvm-project/pull/93976
-WORKDIR /install-llvm
-RUN wget https://apt.llvm.org/llvm.sh \
-    && chmod +x llvm.sh \
-    && ./llvm.sh 19 \
-    && apt-get update \
-    && apt-get install -y libomp-19-dev \
-    && rm -rf /install-llvm
+# Apt caching brings this step down from ~75s to ~10s.
+ARG LLVM_INSTALL_WORKDIR=/root/install-llvm
+WORKDIR "${LLVM_INSTALL_WORKDIR}"
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    wget https://apt.llvm.org/llvm.sh \
+      && chmod +x llvm.sh \
+      && ./llvm.sh 19 \
+      && apt-get update \
+      && apt-get --no-install-recommends install -y libomp-19-dev \
+      && rm -rf "${LLVM_INSTALL_WORKDIR}"
 
 ENV CC=/usr/bin/clang-19
 ENV CXX=/usr/bin/clang++-19
-
 
 # Installing ccache here enables us to use it for compiling DGL (and other
 # things) later. The cache can be persisted in either a `RUN` step or `docker
@@ -70,24 +87,29 @@ ENV CXX=/usr/bin/clang++-19
 # The image already has sccache installed, but it's an ancient version that
 # wasn't properly caching very slow DGL compile steps. Upgrading to a new
 # version didn't work either, so I switched to ccache.
-WORKDIR /ccache
+ARG CCACHE_INSTALL_WORKDIR=/root/install-ccache
+WORKDIR "${CCACHE_INSTALL_WORKDIR}"
 RUN wget https://github.com/ccache/ccache/releases/download/v4.11.2/ccache-4.11.2-linux-x86_64.tar.xz \
     && tar -xf ccache-4.11.2-linux-x86_64.tar.xz \
+    # The base image has already added /opt/cache/bin to the PATH.
     && mv ccache-4.11.2-linux-x86_64/ccache /opt/cache/bin/ \
-    && rm -rf /ccache
+    && rm -rf "${CCACHE_INSTALL_WORKDIR}"
 
 # Patch ROCM headers with a couple of rocPRIM fixes/additions needed by various consumers.
 # - ROCm is for DeviceCopy.
 # - StreamHPC is for device select features.
-WORKDIR /patch-rocm
-RUN apt-get update \
-  && apt-get install -y patchutils \
-  && wget https://patch-diff.githubusercontent.com/raw/ROCm/rocPRIM/pull/662.patch \
-  && wget https://github.com/StreamHPC/rocPRIM/commit/4dde14b4a4fa7d32123ff01034f608afa5b38c8b.patch \
-  && cd /opt/rocm/ \
-  && filterdiff /patch-rocm/662.patch --strip-match=2 --strip=2 -i 'include/*' | patch -p0 \
-  && filterdiff /patch-rocm/4dde14b4a4fa7d32123ff01034f608afa5b38c8b.patch --strip-match=2 --strip=2 -i 'include/*' | patch -p0 \
-  && rm -rf /patch-rocm
+ARG PATCH_ROCM_WORKDIR=/root/patch-rocm
+WORKDIR "${PATCH_ROCM_WORKDIR}"
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update \
+    && apt-get install -y patchutils \
+    && wget https://patch-diff.githubusercontent.com/raw/ROCm/rocPRIM/pull/662.patch \
+    && wget https://github.com/StreamHPC/rocPRIM/commit/4dde14b4a4fa7d32123ff01034f608afa5b38c8b.patch \
+    && cd /opt/rocm/ \
+    && filterdiff "${PATCH_ROCM_WORKDIR}/662.patch" --strip-match=2 --strip=2 -i 'include/*' | patch -p0 \
+    && filterdiff "${PATCH_ROCM_WORKDIR}/4dde14b4a4fa7d32123ff01034f608afa5b38c8b.patch" --strip-match=2 --strip=2 -i 'include/*' | patch -p0 \
+    && rm -rf "${PATCH_ROCM_WORKDIR}"
 
 # By default, build for all the architectures that are supported by
 # hipCollections, which is somewhat limited. See
@@ -108,7 +130,8 @@ ENV AMDGPU_TARGETS="${GPU_TARGETS}"
 ENV CMAKE_HIP_ARCHITECTURES="${GPU_TARGETS}"
 
 # Gather additional or updated ROCm libraries
-WORKDIR /git
+ARG REBUILD_ROCM_LIBS_WORKDIR=/root/rebuild-rocm-libs
+WORKDIR "${REBUILD_ROCM_LIBS_WORKDIR}"
 RUN --mount=type=cache,target=/root/.cache/ccache \
     # We use environment variables rather than CMake defines because they affect
     # the various sub-builds that DGL spawns without us having to manually
@@ -121,23 +144,37 @@ RUN --mount=type=cache,target=/root/.cache/ccache \
     # We later compile DGL with this sloppiness setting, so using it here to for
     # consistency.
     export CCACHE_SLOPPINESS=time_macros \
+    # Share the cache with builds that might be run as a different user.
+    # Everything running as docker basically has root anyways, so I don't think
+    # there are any (additional) security concerns.
+    export CCACHE_UMASK=000 \
+    # Rewrite paths under this directory to be relative, enabling more cache
+    # hits for builds in different directories.
+    export CCACHE_BASEDIR=/root \
+    # Write stats to a separate log so we can get the stats for just this build.
+    export CCACHE_STATSLOG="${REBUILD_ROCM_LIBS_WORKDIR}/ccache-stats.log" \
     && (git clone https://github.com/tpopp/hipCUB.git && cd hipCUB && git checkout f342111197dd020f1c4210b16aa550b08992e97b \
-      && mkdir build && cd build \
-      && cmake -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" -DCMAKE_INSTALL_PREFIX=/opt/rocm .. \
-      && make install) \
+        && mkdir build && cd build \
+        && cmake -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" \
+                -DCMAKE_INSTALL_PREFIX=/opt/rocm .. \
+        && make install) \
     && (git clone https://github.com/ROCm/libhipcxx.git && cd libhipcxx && git checkout v2.2.0 \
-      && mkdir build && cd build \
-      && cmake -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" -DCMAKE_INSTALL_PREFIX=/opt/rocm .. \
-      && make install ) \
+        && mkdir build && cd build \
+        && cmake -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" \
+                -DCMAKE_INSTALL_PREFIX=/opt/rocm .. \
+        && make install ) \
     && (git clone https://github.com/tpopp/hipCollections.git && cd hipCollections && git checkout 6e31da8fd309f229d28adde8583a30bb4efaf1b7 \
-      && mkdir build && cd build \
-      && cmake -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" -DCMAKE_INSTALL_PREFIX=/opt/rocm -DINSTALL_CUCO=ON -DBUILD_TESTS=OFF -DBUILD_BENCHMARKS=OFF -DBUILD_EXAMPLES=OFF -DCMAKE_HIP_ARCHITECTURES="${GPU_TARGETS}" .. \
-      && make install ) \
+        && mkdir build && cd build \
+        && cmake -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" \
+                -DCMAKE_INSTALL_PREFIX=/opt/rocm -DINSTALL_CUCO=ON -DBUILD_TESTS=OFF -DBUILD_BENCHMARKS=OFF -DBUILD_EXAMPLES=OFF .. \
+        && make install ) \
     && (git clone https://github.com/tpopp/rocThrust.git && cd rocThrust && git checkout 613db9a025709fb18f2a676543a17850bd231b04 \
-      && mkdir build && cd build \
-      && cmake -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" -DCMAKE_INSTALL_PREFIX=/opt/rocm .. \
-      && make install ) \
-    && rm -rf /git
+        && mkdir build && cd build \
+        && cmake -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" \
+                -DCMAKE_INSTALL_PREFIX=/opt/rocm .. \
+        && make install ) \
+    && ccache -vvv --show-log-stats \
+    && rm -rf "${REBUILD_ROCM_LIBS_WORKDIR}"
 
 WORKDIR /
 
