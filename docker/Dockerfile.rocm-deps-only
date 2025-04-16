@@ -12,7 +12,7 @@
 # from
 # https://github.com/pytorch/pytorch/blob/main/.ci/docker/ubuntu-rocm/Dockerfile
 # and then install PyTorch itself.
-FROM rocm/pytorch:rocm6.3.3_ubuntu22.04_py3.10_pytorch_release_2.4.0
+FROM rocm/pytorch:rocm6.4_ubuntu22.04_py3.10_pytorch_release_2.4.1
 
 # Clean up base image 
 
@@ -64,23 +64,6 @@ RUN --mount=type=cache,target=/root/.cache/pip \
         scipy \
         tqdm
 
-# Clang for compiling DGL
-# We need https://github.com/llvm/llvm-project/pull/93976
-# Apt caching brings this step down from ~75s to ~10s.
-ARG LLVM_INSTALL_WORKDIR=/root/install-llvm
-WORKDIR "${LLVM_INSTALL_WORKDIR}"
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    wget https://apt.llvm.org/llvm.sh \
-      && chmod +x llvm.sh \
-      && ./llvm.sh 19 \
-      && apt-get update \
-      && apt-get --no-install-recommends install -y libomp-19-dev \
-      && rm -rf "${LLVM_INSTALL_WORKDIR}"
-
-ENV CC=/usr/bin/clang-19
-ENV CXX=/usr/bin/clang++-19
-
 # Installing ccache here enables us to use it for compiling DGL (and other
 # things) later. The cache can be persisted in either a `RUN` step or `docker
 # run` via a bind mount (https://docs.docker.com/engine/storage/bind-mounts/).
@@ -95,33 +78,29 @@ RUN wget https://github.com/ccache/ccache/releases/download/v4.11.2/ccache-4.11.
     && mv ccache-4.11.2-linux-x86_64/ccache /opt/cache/bin/ \
     && rm -rf "${CCACHE_INSTALL_WORKDIR}"
 
-# Patch ROCM headers with a couple of rocPRIM fixes/additions needed by various consumers.
-# - ROCm is for DeviceCopy.
-# - StreamHPC is for device select features.
-ARG PATCH_ROCM_WORKDIR=/root/patch-rocm
-WORKDIR "${PATCH_ROCM_WORKDIR}"
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update \
-    && apt-get install -y patchutils \
-    && wget https://patch-diff.githubusercontent.com/raw/ROCm/rocPRIM/pull/662.patch \
-    && wget https://github.com/StreamHPC/rocPRIM/commit/4dde14b4a4fa7d32123ff01034f608afa5b38c8b.patch \
-    && cd /opt/rocm/ \
-    && filterdiff "${PATCH_ROCM_WORKDIR}/662.patch" --strip-match=2 --strip=2 -i 'include/*' | patch -p0 \
-    && filterdiff "${PATCH_ROCM_WORKDIR}/4dde14b4a4fa7d32123ff01034f608afa5b38c8b.patch" --strip-match=2 --strip=2 -i 'include/*' | patch -p0 \
-    && rm -rf "${PATCH_ROCM_WORKDIR}"
+# We pick up the clang and clang++ that are bundled with ROCm. We need at least
+# version 19 for https://github.com/llvm/llvm-project/pull/93976 (which ROCm 6.4
+# ships with).
+ENV CC=/opt/rocm/llvm/bin/clang
+ENV CXX=/opt/rocm/llvm/bin/clang++
 
-# By default, build for all the architectures that are supported by
-# hipCollections, which is somewhat limited. See
-# https://github.com/rocm/hipCollections/blob/b1cd36f600/CMakeLists.txt#L82 This
-# is a subset of the architectures that the ROCm PyTorch image was built for.
+# By default, build for all the CDNA architectures. The limitations here are:
+# - the architectures the base image builds PyTorch for
+# - the architectures that hipCollections supports
+#   (https://github.com/rocm/hipCollections/blob/b1cd36f600/CMakeLists.txt#L82)
+# - architectures that are OK with us hardcoding the wave size to 64 (which
+#   seems to exclude at least gfx1100).
+# I'm not really clear on the status of gfx940 and gfx941. I think they're
+# somehow older versions of CDNA3, but I'm unsure when you would need to use
+# them now. The base image doesn't build PyTorch for them though, so I'm leaving
+# them off.
 # HIP has a bunch of different variables it might use to decide which
 # architectures to use and honestly I'm not exactly clear on when each is used.
 # Some of them not being set causes warnings that are maybe false alarms, but
 # maybe not. We just try to set all of them. See
 # https://rocm.docs.amd.com/en/latest/conceptual/cmake-packages.html
 
-ARG GPU_TARGETS="gfx908;gfx90a;gfx940;gfx941;gfx942"
+ARG GPU_TARGETS="gfx908;gfx90a;gfx942"
 # ARG is only scoped to this build, so we also declare with ENV. We want users
 # of the image to know what these were set to.
 ENV GPU_TARGETS="${GPU_TARGETS}"
