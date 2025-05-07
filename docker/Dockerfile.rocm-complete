@@ -89,5 +89,6 @@ RUN --mount=type=cache,target=/root/.cache/ccache \
     && ccache -vvv --show-log-stats \
     && rm "${CCACHE_STATSLOG}" \
     && cd python \
-    && python setup.py install \
+    # We do a development install here so people can hack on the DGL python from inside the container
+    && python setup.py develop \
     && python setup.py build_ext --inplace
