@@ -24,7 +24,7 @@ using namespace cuda;
 #ifdef DGL_USE_ROCM
 #define CUSPARSE_IS_LEGACY 0
 #else
-#define CUSPARSE_IS_LEGACY CUDART_VERSION >= 11000
+#define CUSPARSE_IS_LEGACY CUDART_VERSION < 11000
 #endif
 
 namespace aten {
