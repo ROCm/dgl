@@ -1,8 +1,12 @@
+import backend as F
 import dgl
-import dgl.graphbolt as gb
 import pytest
 import torch
 
+if not F.is_hip():
+    import dgl.graphbolt as gb
+else:
+    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
 
 relation = "A:r:B"
 reverse_relation = "B:rr:A"

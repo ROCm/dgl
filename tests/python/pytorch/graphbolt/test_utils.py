@@ -6,9 +6,13 @@ from functools import partial
 import backend as F
 
 import dgl
-import dgl.graphbolt as gb
 import pytest
 import torch
+
+if not F.is_hip():
+    import dgl.graphbolt as gb
+else:
+    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
 
 
 def test_add_reverse_edges_homo():

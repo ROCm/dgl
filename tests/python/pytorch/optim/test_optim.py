@@ -9,7 +9,7 @@ import torch.multiprocessing as mp
 from dgl.nn import NodeEmbedding
 from dgl.optim import SparseAdagrad, SparseAdam
 
-
+@unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")
 @pytest.mark.parametrize("emb_dim", [1, 4, 101, 1024])
 def test_sparse_adam(emb_dim):
@@ -48,7 +48,7 @@ def test_sparse_adam(emb_dim):
     # Pytorch sparseAdam maintains a global step
     # DGL sparseAdam use a per embedding step
 
-
+@unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")
 @pytest.mark.parametrize("use_uva", [False, True, None])
 @pytest.mark.parametrize("emb_dim", [1, 4, 101, 1024])
@@ -644,7 +644,7 @@ def start_sparse_adam_state_dict_worker(
 
     th.distributed.barrier()
 
-
+@unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")
 @unittest.skipIf(F.ctx().type == "cpu", reason="gpu only test")
 @pytest.mark.parametrize("num_workers", [1, 2, 4, 8])

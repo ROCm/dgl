@@ -18,7 +18,11 @@
  * @brief Index select operator implementation on CUDA.
  */
 #include <c10/core/ScalarType.h>
+#ifdef __HIPCC__
+#include <hiprand/hiprand_kernel.h>
+#else
 #include <curand_kernel.h>
+#endif
 #include <graphbolt/continuous_seed.h>
 #include <graphbolt/cuda_ops.h>
 #include <graphbolt/cuda_sampling_ops.h>
@@ -30,7 +34,11 @@
 
 #include <algorithm>
 #include <array>
+#ifdef __HIPCC__
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
+#endif
 #if __CUDA_ARCH__ >= 700
 #include <cuda/atomic>
 #endif  // __CUDA_ARCH__ >= 700

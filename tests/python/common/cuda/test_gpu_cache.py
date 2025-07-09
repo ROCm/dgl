@@ -49,6 +49,7 @@ def generate_graph(idtype, grad=False, add_data=True):
     return g
 
 
+@unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(not F.gpu_ctx(), reason="only necessary with GPU")
 @parametrize_idtype
 def test_gpu_cache(idtype):

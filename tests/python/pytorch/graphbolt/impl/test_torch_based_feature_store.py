@@ -9,7 +9,11 @@ import pydantic
 import pytest
 import torch
 
-from dgl import graphbolt as gb
+if not F.is_hip():
+    import dgl.graphbolt as gb
+    from dgl.graphbolt.impl.sampled_subgraph_impl import SampledSubgraphImpl
+else:
+    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
 
 
 def to_on_disk_tensor(test_dir, name, t):

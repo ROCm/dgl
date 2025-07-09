@@ -5,10 +5,14 @@ from collections.abc import Iterable, Mapping
 
 import backend as F
 
-import dgl.graphbolt as gb
 import pytest
 import torch
 from torch.torch_version import TorchVersion
+
+if not F.is_hip():
+    import dgl.graphbolt as gb
+else:
+    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
 
 from . import gb_test_utils
 

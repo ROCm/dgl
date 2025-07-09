@@ -20,7 +20,11 @@
 #ifndef GRAPHBOLT_CUDA_COMMON_H_
 #define GRAPHBOLT_CUDA_COMMON_H_
 
+#ifdef __HIPCC__
+#include <ATen/hip/HIPEvent.h>
+#else
 #include <ATen/cuda/CUDAEvent.h>
+#endif
 #include <c10/cuda/CUDACachingAllocator.h>
 #include <c10/cuda/CUDAException.h>
 #include <c10/cuda/CUDAStream.h>
