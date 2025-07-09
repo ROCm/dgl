@@ -1,9 +1,15 @@
 import re
 
+import backend as F
+
 import dgl
 import pytest
 import torch
-from dgl import graphbolt as gb
+
+if not F.is_hip():
+    import dgl.graphbolt as gb
+else:
+    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
 
 
 def test_ItemSet_names():

@@ -3,7 +3,10 @@ import backend as F
 import pytest
 import torch
 
-from dgl import graphbolt as gb
+if not F.is_hip():
+    import dgl.graphbolt as gb
+else:
+    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
 
 
 def _test_query_and_replace(policy1, policy2, keys, offset):

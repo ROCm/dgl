@@ -3,7 +3,11 @@ project(graphbolt C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(USE_CUDA)
+if (USE_HIP)
+  message(STATUS "Build graphbolt with HIP support")
+  enable_language(HIP) 
+  add_definitions(-DGRAPHBOLT_USE_HIP)
+elseif(USE_CUDA)
   message(STATUS "Build graphbolt with CUDA support")
   enable_language(CUDA)
   add_definitions(-DGRAPHBOLT_USE_CUDA)
@@ -71,9 +75,23 @@ if(USE_CUDA)
     set(CMAKE_CUDA_ARCHITECTURES_FILTERED "70")
   endif()
   set(LIB_GRAPHBOLT_CUDA_NAME "${LIB_GRAPHBOLT_NAME}_cuda")
+  add_library(${LIB_GRAPHBOLT_NAME} SHARED ${BOLT_SRC} ${BOLT_HEADERS})
+elseif(USE_HIP)
+  file(GLOB BOLT_HIP_SRC
+    ${BOLT_DIR}/cuda/*.cu
+    ${BOLT_DIR}/cuda/*.cc
+  )
+  list(APPEND BOLT_SRC ${BOLT_HIP_SRC})
+  #if(DEFINED ENV{ROCMARCHS})
+  #  set(CMAKE_HIP_ARCHITECTURES $ENV{ROCMARCHS})
+  #endif()
+  set(LIB_GRAPHBOLT_HIP_NAME "${LIB_GRAPHBOLT_NAME}_hip")
+  set_source_files_properties(${BOLT_HIP_SRC} PROPERTIES LANGUAGE HIP)
+  add_library(${LIB_GRAPHBOLT_NAME} SHARED ${BOLT_SRC} ${BOLT_HEADERS})
+  set_property(TARGET ${LIB_GRAPHBOLT_NAME} PROPERTY HIP_ARCHITECTURES ${ROCMARCHS})
 endif()
 
-add_library(${LIB_GRAPHBOLT_NAME} SHARED ${BOLT_SRC} ${BOLT_HEADERS})
+
 include_directories(BEFORE ${BOLT_DIR}
                            ${BOLT_HEADERS}
                            # For CXX20 features:
@@ -87,15 +105,17 @@ if(BUILD_WITH_TASKFLOW)
   target_compile_definitions(${LIB_GRAPHBOLT_NAME} PRIVATE BUILD_WITH_TASKFLOW=1)
 endif()
 
-if(USE_OPENMP)
+if(USE_OPENMP OR USE_HIP)
   find_package(OpenMP REQUIRED)
+  message(STATUS "OpenMP Found")
   target_link_libraries(${LIB_GRAPHBOLT_NAME} OpenMP::OpenMP_CXX)
   message(STATUS "Build graphbolt with OpenMP.")
-endif(USE_OPENMP)
+endif(USE_OPENMP OR USE_HIP)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
   if(USE_LIBURING)
     add_definitions(-DHAVE_LIBRARY_LIBURING)
+    message(STATUS "LIBURING Found")
     include(ExternalProject)
     set(LIBURING_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/third_party/liburing)
     set(LIBURING_C_COMPILER "${CMAKE_C_COMPILER} -w")
@@ -123,6 +143,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
 endif()
 
 if(USE_CUDA)
+  message(STATUS "BUild using CUDA_ARCHITECTURES for graphbolt: ${archs}")
   file(GLOB BOLT_CUDA_EXTENSION_SRC
     ${BOLT_DIR}/cuda/extension/*.cu
     ${BOLT_DIR}/cuda/extension/*.cc
@@ -155,7 +176,41 @@ if(USE_CUDA)
   message(STATUS "CUDA_ARCHITECTURES for graphbolt extension: ${archs}")
 
   target_link_libraries(${LIB_GRAPHBOLT_NAME} ${LIB_GRAPHBOLT_CUDA_NAME})
+
+elseif(USE_HIP)
+  file(GLOB BOLT_CUDA_EXTENSION_SRC
+    ${BOLT_DIR}/cuda/extension/*.cu
+    ${BOLT_DIR}/cuda/extension/*.cc
+    ../third_party/HugeCTR/gpu_cache/src/nv_gpu_cache.cu
+  )
+  add_library(${LIB_GRAPHBOLT_HIP_NAME} STATIC ${BOLT_CUDA_EXTENSION_SRC} ${BOLT_HEADERS})
+  target_link_libraries(${LIB_GRAPHBOLT_HIP_NAME} "${TORCH_LIBRARIES}")
+
+  set_target_properties(${LIB_GRAPHBOLT_NAME} PROPERTIES HIP_STANDARD 17)
+  set_target_properties(${LIB_GRAPHBOLT_HIP_NAME} PROPERTIES HIP_STANDARD 17)
+  set_target_properties(${LIB_GRAPHBOLT_HIP_NAME} PROPERTIES HIP_ARCHITECTURES "${ROCMARCHS}")
+  set_target_properties(${LIB_GRAPHBOLT_HIP_NAME} PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+  set_target_properties(${LIB_GRAPHBOLT_HIP_NAME} PROPERTIES LINKER_LANGUAGE HIP)
+  # Enables libcudacxx for gpu_cache. 
+  target_compile_definitions(${LIB_GRAPHBOLT_HIP_NAME} PRIVATE LIBCUDACXX_VERSION)
+  include_directories(AFTER "../third_party/HugeCTR/gpu_cache/include")
+  message(STATUS "Build graphbolt extension with HugeCTR GPU embedding cache.")
+
+  message(STATUS "Use external CCCL library for a consistent API and performance for graphbolt.")
+  include_directories(BEFORE
+                      "../third_party/cccl/thrust"
+                      "../third_party/cccl/cub"
+                      "../third_party/cuco/include")
+   
+  get_property(archs TARGET ${LIB_GRAPHBOLT_NAME} PROPERTY HIP_ARCHITECTURES)
+  message(STATUS "HIP_ARCHITECTURES for graphbolt: ${archs}")
+
+  get_property(archs TARGET ${LIB_GRAPHBOLT_HIP_NAME} PROPERTY HIP_ARCHITECTURES)
+  message(STATUS "HIP_ARCHITECTURES for graphbolt extension: ${archs}")
+
+  target_link_libraries(${LIB_GRAPHBOLT_NAME} ${LIB_GRAPHBOLT_HIP_NAME})
 endif()
+
 
 # The Torch CMake configuration only sets up the path for the MKL library when
 # using the conda distribution. The following is a workaround to address this

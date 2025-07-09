@@ -28,7 +28,11 @@
 #endif
 
 #define SET_ASSOCIATIVITY 2
+#ifdef __HIPCC__
+#define SLAB_SIZE warpSize
+#else
 #define SLAB_SIZE 32
+#endif
 #define TASK_PER_WARP_TILE_MACRO 1
 
 namespace gpu_cache {

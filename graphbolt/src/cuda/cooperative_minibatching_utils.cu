@@ -22,8 +22,12 @@
 #include <thrust/scatter.h>
 #include <thrust/transform.h>
 
+#ifdef __HIPCC__
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
 #include <cuda/functional>
+#endif
 
 #include "../utils.h"
 #include "./common.h"

@@ -11,6 +11,11 @@ def cuda():
     pass
 
 
+def is_hip():
+    """Detects HIP Env."""
+    pass
+
+
 def is_cuda_available():
     """Check whether CUDA is available."""
     pass

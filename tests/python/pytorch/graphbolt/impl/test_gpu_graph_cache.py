@@ -2,18 +2,23 @@ import unittest
 
 import backend as F
 
-import dgl.graphbolt as gb
-
 import pytest
 import torch
+
+if not F.is_hip():
+    import dgl.graphbolt as gb
+else:
+    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
 
 
 @unittest.skipIf(
     F._default_context_str != "gpu"
     or torch.cuda.get_device_capability()[0] < 7,
-    reason="GPUCachedFeature tests are available only when testing the GPU backend."
-    if F._default_context_str != "gpu"
-    else "GPUCachedFeature requires a Volta or later generation NVIDIA GPU.",
+    reason=(
+        "GPUCachedFeature tests are available only when testing the GPU backend."
+        if F._default_context_str != "gpu"
+        else "GPUCachedFeature requires a Volta or later generation NVIDIA GPU."
+    ),
 )
 @pytest.mark.parametrize(
     "indptr_dtype",

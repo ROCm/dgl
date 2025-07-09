@@ -7,7 +7,7 @@ import torch.distributed as dist
 from dgl.cuda import nccl
 from dgl.partition import NDArrayPartition
 
-
+@unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(
     F._default_context_str == "cpu", reason="NCCL only runs on GPU."
 )
@@ -31,7 +31,7 @@ def test_nccl_sparse_push_single_remainder():
 
     dist.destroy_process_group()
 
-
+@unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(
     F._default_context_str == "cpu", reason="NCCL only runs on GPU."
 )
@@ -55,7 +55,7 @@ def test_nccl_sparse_pull_single_remainder():
 
     dist.destroy_process_group()
 
-
+@unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(
     F._default_context_str == "cpu", reason="NCCL only runs on GPU."
 )
@@ -82,7 +82,7 @@ def test_nccl_sparse_push_single_range():
 
     dist.destroy_process_group()
 
-
+@unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(
     F._default_context_str == "cpu", reason="NCCL only runs on GPU."
 )

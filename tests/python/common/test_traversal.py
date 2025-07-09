@@ -19,7 +19,7 @@ def toset(x):
     # F.zerocopy_to_numpy may return a int
     return set(F.zerocopy_to_numpy(x).tolist())
 
-
+@unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @parametrize_idtype
 def test_bfs(idtype, n=100):
     def _bfs_nx(g_nx, src):
