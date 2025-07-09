@@ -5,13 +5,18 @@ from sys import platform
 import backend as F
 
 import dgl
-import dgl.graphbolt
-import dgl.graphbolt as gb
+
 import pytest
 import torch
 import torch.distributed as thd
 
-from dgl.graphbolt.datapipes import find_dps, traverse_dps
+if not F.is_hip():
+    import dgl.graphbolt
+    import dgl.graphbolt as gb
+    from dgl.graphbolt.datapipes import find_dps, traverse_dps
+else:
+    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
+
 
 from . import gb_test_utils
 

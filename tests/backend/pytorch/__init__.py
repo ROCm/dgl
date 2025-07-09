@@ -7,6 +7,10 @@ def cuda():
     return th.device("cuda:0")
 
 
+def is_hip():
+    return hasattr(th.version, "hip")
+
+
 def is_cuda_available():
     return th.cuda.is_available()
 

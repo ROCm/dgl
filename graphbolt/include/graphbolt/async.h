@@ -37,7 +37,7 @@
 #include <type_traits>
 #endif
 
-#ifdef GRAPHBOLT_USE_CUDA
+#if defined(GRAPHBOLT_USE_CUDA) || defined(GRAPHBOLT_USE_HIP)
 #include <ATen/cuda/CUDAEvent.h>
 #include <c10/cuda/CUDAGuard.h>
 #include <c10/cuda/CUDAStream.h>
@@ -94,7 +94,7 @@ inline int get_num_interop_threads() {
 
 template <typename T>
 class Future : public torch::CustomClassHolder {
-#ifdef GRAPHBOLT_USE_CUDA
+#if defined(GRAPHBOLT_USE_CUDA) || defined(GRAPHBOLT_USE_HIP)
   using T_no_event = std::conditional_t<std::is_void_v<T>, std::monostate, T>;
   using T_with_event = std::conditional_t<
       std::is_void_v<T>, at::cuda::CUDAEvent,
@@ -105,7 +105,7 @@ class Future : public torch::CustomClassHolder {
 #endif
 
  public:
-#ifdef GRAPHBOLT_USE_CUDA
+#if defined(GRAPHBOLT_USE_CUDA) || defined(GRAPHBOLT_USE_HIP)
   using return_type = std::variant<T_no_event, T_with_event>;
 #else
   using return_type = T;
@@ -116,7 +116,7 @@ class Future : public torch::CustomClassHolder {
   Future() = default;
 
   T Wait() {
-#ifdef GRAPHBOLT_USE_CUDA
+#if defined(GRAPHBOLT_USE_CUDA) || defined(GRAPHBOLT_USE_HIP)
     auto result = future_.get();
     if constexpr (std::is_void_v<T>) {
       if (std::holds_alternative<T_with_event>(result)) {
@@ -148,7 +148,7 @@ class Future : public torch::CustomClassHolder {
 template <typename F>
 inline auto async(F&& function, bool is_cuda = false) {
   using T = decltype(function());
-#ifdef GRAPHBOLT_USE_CUDA
+#if defined(GRAPHBOLT_USE_CUDA) || defined(GRAPHBOLT_USE_HIP)
   struct c10::StreamData3 stream_data;
   if (is_cuda) {
     stream_data = c10::cuda::getCurrentCUDAStream().pack3();
@@ -156,7 +156,7 @@ inline auto async(F&& function, bool is_cuda = false) {
 #endif
   using return_type = typename Future<T>::return_type;
   auto fn = [=, func = std::move(function)]() -> return_type {
-#ifdef GRAPHBOLT_USE_CUDA
+#if defined(GRAPHBOLT_USE_CUDA) || defined(GRAPHBOLT_USE_HIP)
     // We make sure to use the same CUDA stream as the thread launching the
     // async operation.
     if (is_cuda) {

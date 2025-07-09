@@ -6,14 +6,20 @@ import tempfile
 import unittest
 import warnings
 
+import backend as F
+
 import numpy as np
 import pandas as pd
 import pydantic
 import pytest
 import torch
 import yaml
-from dgl import graphbolt as gb
-from dgl.graphbolt import GBWarning
+
+if not F.is_hip():
+    import dgl.graphbolt as gb
+    from dgl.graphbolt import GBWarning
+else:
+    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
 
 from .. import gb_test_utils as gbt
 
@@ -2334,11 +2340,13 @@ def test_OnDiskDataset_load_tasks(edge_fmt):
         # the absolute path segment.
         dataset = gb.OnDiskDataset(test_dir).load()
         original_train_set = dataset.tasks[0].train_set._items
-        dataset.yaml_data["tasks"][0]["train_set"][0]["data"][0][
-            "path"
-        ] = os.path.join(
-            test_dir,
-            dataset.yaml_data["tasks"][0]["train_set"][0]["data"][0]["path"],
+        dataset.yaml_data["tasks"][0]["train_set"][0]["data"][0]["path"] = (
+            os.path.join(
+                test_dir,
+                dataset.yaml_data["tasks"][0]["train_set"][0]["data"][0][
+                    "path"
+                ],
+            )
         )
         dataset.load()
         modify_train_set = dataset.tasks[0].train_set._items

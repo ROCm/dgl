@@ -11,7 +11,11 @@ import pytest
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
-from dgl import graphbolt as gb
+
+if not F.is_hip():
+    import dgl.graphbolt as gb
+else:
+    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
 
 
 def test_ItemSampler_minibatcher():

@@ -4,13 +4,18 @@ import re
 import tempfile
 from functools import partial
 
-import dgl.graphbolt as gb
+import backend as F
 
-import dgl.graphbolt.internal as internal
 import numpy as np
 import pandas as pd
 import pytest
 import torch
+
+if not F.is_hip():
+    import dgl.graphbolt as gb
+    import dgl.graphbolt.internal as internal
+else:
+    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
 
 
 def test_read_torch_data():

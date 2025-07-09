@@ -1,11 +1,17 @@
 import random
 from functools import partial
 
-import dgl.graphbolt as gb
+import backend as F
+import pytest
 import torch
 from torch.utils.data.datapipes.iter import Mapper
 
 from . import gb_test_utils
+
+if not F.is_hip():
+    import dgl.graphbolt as gb
+else:
+    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
 
 
 def test_FeatureFetcher_invoke():

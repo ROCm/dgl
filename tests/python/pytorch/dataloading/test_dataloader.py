@@ -320,14 +320,17 @@ def _ddp_runner(proc_id, nprocs, g, data, args):
 
 
 @parametrize_idtype
+@pytest.mark.parametrize("sampler_name_rocm", ["full", "neighbor", "neighbor2"])
 @pytest.mark.parametrize(
-    "sampler_name", ["full", "neighbor", "neighbor2", "labor"]
+    "sampler_name_cuda", ["full", "neighbor", "neighbor2", "labor"]
 )
 @pytest.mark.parametrize(
     "mode", ["cpu", "uva_cuda_indices", "uva_cpu_indices", "pure_gpu"]
 )
 @pytest.mark.parametrize("use_ddp", [False, True])
-def test_node_dataloader(idtype, sampler_name, mode, use_ddp):
+def test_node_dataloader(
+    idtype, sampler_name_rocm, sampler_name_cuda, mode, use_ddp
+):
     if mode != "cpu" and F.ctx() == F.cpu():
         pytest.skip("UVA and GPU sampling require a GPU.")
     if use_ddp:
@@ -350,13 +353,19 @@ def test_node_dataloader(idtype, sampler_name, mode, use_ddp):
         g1 = g1.to(F.cuda())
 
     use_uva = mode.startswith("uva")
-
-    sampler = {
-        "full": dgl.dataloading.MultiLayerFullNeighborSampler(2),
-        "neighbor": dgl.dataloading.MultiLayerNeighborSampler([3, 3]),
-        "neighbor2": dgl.dataloading.MultiLayerNeighborSampler([3, 3]),
-        "labor": dgl.dataloading.LaborSampler([3, 3]),
-    }[sampler_name]
+    if F.is_hip():
+        sampler = {
+            "full": dgl.dataloading.MultiLayerFullNeighborSampler(2),
+            "neighbor": dgl.dataloading.MultiLayerNeighborSampler([3, 3]),
+            "neighbor2": dgl.dataloading.MultiLayerNeighborSampler([3, 3]),
+        }[sampler_name_rocm]
+    else:
+        sampler = {
+            "full": dgl.dataloading.MultiLayerFullNeighborSampler(2),
+            "neighbor": dgl.dataloading.MultiLayerNeighborSampler([3, 3]),
+            "neighbor2": dgl.dataloading.MultiLayerNeighborSampler([3, 3]),
+            "labor": dgl.dataloading.LaborSampler([3, 3]),
+        }[sampler_name_cuda]
     for num_workers in [0, 1, 2] if mode == "cpu" else [0]:
         dataloader = dgl.dataloading.DataLoader(
             g1,
@@ -402,14 +411,23 @@ def test_node_dataloader(idtype, sampler_name, mode, use_ddp):
         g2 = g2.to(F.cuda())
 
     batch_size = max(g2.num_nodes(nty) for nty in g2.ntypes)
-    sampler = {
-        "full": dgl.dataloading.MultiLayerFullNeighborSampler(2),
-        "neighbor": dgl.dataloading.MultiLayerNeighborSampler(
-            [{etype: 3 for etype in g2.etypes}] * 2
-        ),
-        "neighbor2": dgl.dataloading.MultiLayerNeighborSampler([3, 3]),
-        "labor": dgl.dataloading.LaborSampler([3, 3]),
-    }[sampler_name]
+    if F.is_hip():
+        sampler = {
+            "full": dgl.dataloading.MultiLayerFullNeighborSampler(2),
+            "neighbor": dgl.dataloading.MultiLayerNeighborSampler(
+                [{etype: 3 for etype in g2.etypes}] * 2
+            ),
+            "neighbor2": dgl.dataloading.MultiLayerNeighborSampler([3, 3]),
+        }[sampler_name_rocm]
+    else:
+        sampler = {
+            "full": dgl.dataloading.MultiLayerFullNeighborSampler(2),
+            "neighbor": dgl.dataloading.MultiLayerNeighborSampler(
+                [{etype: 3 for etype in g2.etypes}] * 2
+            ),
+            "neighbor2": dgl.dataloading.MultiLayerNeighborSampler([3, 3]),
+            "labor": dgl.dataloading.LaborSampler([3, 3]),
+        }[sampler_name_cuda]
     for num_workers in [0, 1, 2] if mode == "cpu" else [0]:
         dataloader = dgl.dataloading.DataLoader(
             g2,
