@@ -1,0 +1,28 @@
+{
+    "version": 8,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 18,
+        "patch": 0
+      },
+  "configurePresets": [
+    {
+      "name": "rocm",
+      "description": "Build with ROCm",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "BUILD_TYPE": "Release",
+        "CMAKE_BUILD_TYPE": "Release",
+        "USE_HIP": "ON",
+        "GPU_TARGETS": "gfx90a,gfx942",
+        "ROCM_TARGET_ARCH": "gfx90a,gfx942",
+        "CMAKE_HIP_ARCHITECTURES": "gfx90a,gfx942",
+        "CMAKE_INSTALL_PREFIX": "/opt/rocm",
+        "BUILD_CPP_TEST": "ON",
+        "CMAKE_HIP_FLAGS": "-ftime-trace",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    }
+  ]
+}
