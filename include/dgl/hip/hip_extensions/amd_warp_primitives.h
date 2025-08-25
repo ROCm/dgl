@@ -83,12 +83,14 @@ __device__ inline void __sync_active_threads() {
   __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "wavefront");
 }
 
+#if HIP_VERSION_MAJOR < 7 
 __device__ inline void __syncwarp() {
   /* sync/barrier all threads in a warp */
   __builtin_amdgcn_fence(__ATOMIC_RELEASE, "wavefront");
   __builtin_amdgcn_wave_barrier();
   __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "wavefront");
 }
+#endif
 
 __device__ inline int __all_sync(lane_mask mask, int predicate) {
   /* calling thread must be set in the mask */

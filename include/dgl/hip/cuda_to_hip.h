@@ -82,7 +82,11 @@ using cudaStream_t = hipStream_t;
 #define cublasCreate hipblasCreate
 #define cublasDgeam hipblasDgeam
 #define cublasDgemm hipblasDgemm
+#if HIP_VERSION_MAJOR >= 7
+#define cublasGemmEx hipblasGemmEx_64
+#else
 #define cublasGemmEx hipblasGemmEx_v2
+#endif
 #define cublasHandle_t hipblasHandle_t
 #define cublasHgemm hipblasHgemm
 #define cublasOperation_t hipblasOperation_t

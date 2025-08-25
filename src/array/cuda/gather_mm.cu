@@ -316,7 +316,11 @@ void GatherMM(
   const int64_t tot_num_rows = A->shape[0];
   const int ntx = 128;
 #if defined(__HIPCC__)
-  const int warp_size = warpSize;
+  #if HIP_VERSION_MAJOR >= 7
+  const int warp_size = 64;  // AMD wavefront size
+  #else
+  const int warp_size = warpSize;  // Pre-7.0, still constexpr
+  #endif
 #else
   const int warp_size = 32;
 #endif
@@ -353,8 +357,12 @@ void GatherMMScatter(
   int64_t in_len = A->shape[1];                                  // cols of A
   int64_t tot_num_rows = A->shape[0];
   const int ntx = 128;
-#ifdef __HIPCC__
-  const int warp_size = warpSize;
+#if defined(__HIPCC__)
+  #if HIP_VERSION_MAJOR >= 7
+  const int warp_size = 64;  // AMD wavefront size
+  #else
+  const int warp_size = warpSize;  // Pre-7.0, still constexpr
+  #endif
 #else
   const int warp_size = 32;
 #endif
