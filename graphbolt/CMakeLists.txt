@@ -15,15 +15,16 @@ if (USE_HIP)
   message(STATUS "Build graphbolt with HIP support")
   enable_language(HIP) 
   add_definitions(-DGRAPHBOLT_USE_HIP)
+  add_definitions(-DDGL_USE_HIP)
   add_definitions(-DHIP_ENABLE_WARP_SYNC_BUILTINS)
 
   # Dependencies
   ## ROCm-DS dependencies
   # CPMAddPackage("gh:github.com:ROCm/libhipcxx#release/2.2.x")
   find_package(libhipcxx REQUIRED)
-  find_package(cuco REQUIRED)
+  # find_package(cuco REQUIRED)
   # Pulls in libhipcxx
-  # CPMAddPackage("gh:ROCm/hipcollections#release/0.2.x")
+  CPMAddPackage("gh:ROCm/hipcollections#release/0.2.x")
 
   ## rocm-libraries dependencies
   find_package(rocprim REQUIRED)
@@ -112,6 +113,7 @@ elseif(USE_HIP)
   #  set(CMAKE_HIP_ARCHITECTURES $ENV{ROCMARCHS})
   #endif()
   set(LIB_GRAPHBOLT_HIP_NAME "${LIB_GRAPHBOLT_NAME}_hip")
+  set_source_files_properties(${BOLT_SRC} PROPERTIES LANGUAGE HIP)
   set_source_files_properties(${BOLT_HIP_SRC} PROPERTIES LANGUAGE HIP)
   add_library(${LIB_GRAPHBOLT_NAME} SHARED ${BOLT_SRC} ${BOLT_HEADERS})
   set_property(TARGET ${LIB_GRAPHBOLT_NAME} PROPERTY HIP_ARCHITECTURES ${ROCMARCHS})
@@ -176,6 +178,9 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
   endif(USE_LIBURING)
 endif()
 
+#
+# GraphBolt Extensions
+#
 if(USE_CUDA)
   message(STATUS "BUild using CUDA_ARCHITECTURES for graphbolt: ${archs}")
   file(GLOB BOLT_CUDA_EXTENSION_SRC
@@ -213,8 +218,8 @@ if(USE_CUDA)
 
 elseif(USE_HIP)
   file(GLOB BOLT_CUDA_EXTENSION_SRC
-    ${BOLT_DIR}/cuda/extension/*.cu
-    ${BOLT_DIR}/cuda/extension/*.cc
+    ${BOLT_DIR}/hip/extension/*.cu
+    ${BOLT_DIR}/hip/extension/*.cc
     ../third_party/HugeCTR/gpu_cache/src/nv_gpu_cache.cu
   )
   add_library(${LIB_GRAPHBOLT_HIP_NAME} STATIC ${BOLT_CUDA_EXTENSION_SRC} ${BOLT_HEADERS})
