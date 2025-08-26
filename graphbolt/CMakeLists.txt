@@ -3,10 +3,32 @@ project(graphbolt C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Hipify the graphbolt source code using
+if (USE_HIP)
+  include(../cmake/modules/dgl_hipify.cmake)
+  hipify(CUDA_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+endif(USE_HIP)
+
+include(../cmake/CPM.cmake)
+
 if (USE_HIP)
   message(STATUS "Build graphbolt with HIP support")
   enable_language(HIP) 
   add_definitions(-DGRAPHBOLT_USE_HIP)
+  add_definitions(-DHIP_ENABLE_WARP_SYNC_BUILTINS)
+
+  # Dependencies
+  ## ROCm-DS dependencies
+  # CPMAddPackage("gh:github.com:ROCm/libhipcxx#release/2.2.x")
+  find_package(libhipcxx REQUIRED)
+  find_package(cuco REQUIRED)
+  # Pulls in libhipcxx
+  # CPMAddPackage("gh:ROCm/hipcollections#release/0.2.x")
+
+  ## rocm-libraries dependencies
+  find_package(rocprim REQUIRED)
+  find_package(hipcub REQUIRED)
+  find_package(rocthrust REQUIRED)
 elseif(USE_CUDA)
   message(STATUS "Build graphbolt with CUDA support")
   enable_language(CUDA)
@@ -53,11 +75,14 @@ option(BUILD_WITH_TASKFLOW "Use taskflow as parallel backend" ON)
 option(USE_OPENMP "Use OpenMP for graphbolt" ON)
 option(USE_LIBURING "Build graphbolt with liburing support" ON)
 
+#
+# Graph Bolt Core Library
+#
 set(BOLT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(BOLT_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 file(GLOB BOLT_HEADERS ${BOLT_INCLUDE})
-file(GLOB BOLT_SRC ${BOLT_DIR}/*.cc)
 if(USE_CUDA)
+  file(GLOB BOLT_SRC ${BOLT_DIR}/*.cc)
   file(GLOB BOLT_CUDA_SRC
     ${BOLT_DIR}/cuda/*.cu
     ${BOLT_DIR}/cuda/*.cc
@@ -77,9 +102,10 @@ if(USE_CUDA)
   set(LIB_GRAPHBOLT_CUDA_NAME "${LIB_GRAPHBOLT_NAME}_cuda")
   add_library(${LIB_GRAPHBOLT_NAME} SHARED ${BOLT_SRC} ${BOLT_HEADERS})
 elseif(USE_HIP)
+  file(GLOB BOLT_SRC ${BOLT_DIR}/*_hip.cc)
   file(GLOB BOLT_HIP_SRC
-    ${BOLT_DIR}/cuda/*.cu
-    ${BOLT_DIR}/cuda/*.cc
+    ${BOLT_DIR}/hip/*.cu
+    ${BOLT_DIR}/hip/*.cc
   )
   list(APPEND BOLT_SRC ${BOLT_HIP_SRC})
   #if(DEFINED ENV{ROCMARCHS})
@@ -91,14 +117,22 @@ elseif(USE_HIP)
   set_property(TARGET ${LIB_GRAPHBOLT_NAME} PROPERTY HIP_ARCHITECTURES ${ROCMARCHS})
 endif()
 
+# Setup includes
 
 include_directories(BEFORE ${BOLT_DIR}
                            ${BOLT_HEADERS}
                            # For CXX20 features:
                            # `std::atomic_ref`, `std::counting_semaphore`
-                           "../third_party/cccl/libcudacxx/include"
                            "../third_party/pcg/include"
                            "../third_party/tsl_robin_map/include")
+if (USE_HIP)
+# TODO ?? Nothing here?
+else()
+include_directories(BEFORE # For CXX20 features:
+                           # `std::atomic_ref`, `std::counting_semaphore`
+                           "../third_party/cccl/libcudacxx/include")
+endif(USE_HIP)
+
 target_link_libraries(${LIB_GRAPHBOLT_NAME} "${TORCH_LIBRARIES}")
 if(BUILD_WITH_TASKFLOW)
   target_include_directories(${LIB_GRAPHBOLT_NAME} PRIVATE "../third_party/taskflow")
@@ -184,7 +218,7 @@ elseif(USE_HIP)
     ../third_party/HugeCTR/gpu_cache/src/nv_gpu_cache.cu
   )
   add_library(${LIB_GRAPHBOLT_HIP_NAME} STATIC ${BOLT_CUDA_EXTENSION_SRC} ${BOLT_HEADERS})
-  target_link_libraries(${LIB_GRAPHBOLT_HIP_NAME} "${TORCH_LIBRARIES}")
+  target_link_libraries(${LIB_GRAPHBOLT_HIP_NAME} PRIVATE "${TORCH_LIBRARIES}")
 
   set_target_properties(${LIB_GRAPHBOLT_NAME} PROPERTIES HIP_STANDARD 17)
   set_target_properties(${LIB_GRAPHBOLT_HIP_NAME} PROPERTIES HIP_STANDARD 17)
@@ -196,12 +230,25 @@ elseif(USE_HIP)
   include_directories(AFTER "../third_party/HugeCTR/gpu_cache/include")
   message(STATUS "Build graphbolt extension with HugeCTR GPU embedding cache.")
 
-  message(STATUS "Use external CCCL library for a consistent API and performance for graphbolt.")
-  include_directories(BEFORE
-                      "../third_party/cccl/thrust"
-                      "../third_party/cccl/cub"
-                      "../third_party/cuco/include")
-   
+  # message(STATUS "Use external CCCL library for a consistent API and performance for graphbolt.")
+  # include_directories(BEFORE
+  #                     "../third_party/cccl/thrust"
+  #                     "../third_party/cccl/cub"
+  #                     "../third_party/cuco/include")
+
+  include_directories(
+    $<TARGET_PROPERTY:cuco::cuco,INTERFACE_INCLUDE_DIRECTORIES>
+    $<TARGET_PROPERTY:hip::hipcub,INTERFACE_INCLUDE_DIRECTORIES>
+    )
+  target_link_libraries(${LIB_GRAPHBOLT_HIP_NAME}  PRIVATE
+    cuco::cuco
+    hip::device
+    hip::host
+    hip::hipcub
+    roc::rocprim_hip
+    roc::rocthrust
+  )
+
   get_property(archs TARGET ${LIB_GRAPHBOLT_NAME} PROPERTY HIP_ARCHITECTURES)
   message(STATUS "HIP_ARCHITECTURES for graphbolt: ${archs}")
 

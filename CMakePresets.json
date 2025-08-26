@@ -21,7 +21,8 @@
         "CMAKE_INSTALL_PREFIX": "/opt/rocm",
         "BUILD_CPP_TEST": "ON",
         "CMAKE_HIP_FLAGS": "-ftime-trace",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_PREFIX_PATH": "/opt/rocm/lib/cmake"
       }
     }
   ]
