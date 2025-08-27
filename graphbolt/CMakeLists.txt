@@ -22,9 +22,9 @@ if (USE_HIP)
   ## ROCm-DS dependencies
   # CPMAddPackage("gh:github.com:ROCm/libhipcxx#release/2.2.x")
   find_package(libhipcxx REQUIRED)
-  # find_package(cuco REQUIRED)
+  find_package(cuco REQUIRED)
   # Pulls in libhipcxx
-  CPMAddPackage("gh:ROCm/hipcollections#release/0.2.x")
+  # CPMAddPackage("gh:ROCm/hipcollections#release/0.2.x")
 
   ## rocm-libraries dependencies
   find_package(rocprim REQUIRED)
@@ -104,9 +104,16 @@ if(USE_CUDA)
   add_library(${LIB_GRAPHBOLT_NAME} SHARED ${BOLT_SRC} ${BOLT_HEADERS})
 elseif(USE_HIP)
   file(GLOB BOLT_SRC ${BOLT_DIR}/*_hip.cc)
+  # TODO brittle way to include the missing src files
+  list(APPEND BOLT_SRC
+    "${BOLT_DIR}/concurrent_id_hash_map.cc"
+    "${BOLT_DIR}/serialize.cc"
+    "${BOLT_DIR}/shared_memory.cc"
+  )
   file(GLOB BOLT_HIP_SRC
     ${BOLT_DIR}/hip/*.cu
-    ${BOLT_DIR}/hip/*.cc
+    ${BOLT_DIR}/hip/*.cc  
+    ${BOLT_DIR}/hip/*.hip
   )
   list(APPEND BOLT_SRC ${BOLT_HIP_SRC})
   #if(DEFINED ENV{ROCMARCHS})
@@ -217,15 +224,18 @@ if(USE_CUDA)
   target_link_libraries(${LIB_GRAPHBOLT_NAME} ${LIB_GRAPHBOLT_CUDA_NAME})
 
 elseif(USE_HIP)
-  file(GLOB BOLT_CUDA_EXTENSION_SRC
+  file(GLOB LIB_GRAPHBOLT_HIP_SRC
     ${BOLT_DIR}/hip/extension/*.cu
     ${BOLT_DIR}/hip/extension/*.cc
+    ${BOLT_DIR}/hip/extension/*.hip
     ../third_party/HugeCTR/gpu_cache/src/nv_gpu_cache.cu
   )
-  add_library(${LIB_GRAPHBOLT_HIP_NAME} STATIC ${BOLT_CUDA_EXTENSION_SRC} ${BOLT_HEADERS})
+  message(STATUS "LIB_GRAPHBOLT_HIP_SRC: ${LIB_GRAPHBOLT_HIP_SRC}")
+  add_library(${LIB_GRAPHBOLT_HIP_NAME} STATIC ${LIB_GRAPHBOLT_HIP_SRC} ${BOLT_HEADERS})
   target_link_libraries(${LIB_GRAPHBOLT_HIP_NAME} PRIVATE "${TORCH_LIBRARIES}")
 
-  set_target_properties(${LIB_GRAPHBOLT_NAME} PROPERTIES HIP_STANDARD 17)
+  set_source_files_properties(${LIB_GRAPHBOLT_HIP_SRC} PROPERTIES LANGUAGE HIP)
+  set_target_properties(${LIB_GRAPHBOLT_HIP_NAME} PROPERTIES CUDA_STANDARD 17)
   set_target_properties(${LIB_GRAPHBOLT_HIP_NAME} PROPERTIES HIP_STANDARD 17)
   set_target_properties(${LIB_GRAPHBOLT_HIP_NAME} PROPERTIES HIP_ARCHITECTURES "${ROCMARCHS}")
   set_target_properties(${LIB_GRAPHBOLT_HIP_NAME} PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
