@@ -3,10 +3,7 @@ import backend as F
 import pytest
 import torch
 
-if not F.is_hip():
-    import dgl.graphbolt as gb
-else:
-    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
+import dgl.graphbolt as gb
 
 
 @pytest.mark.parametrize(
@@ -14,8 +11,7 @@ else:
 )
 def test_hetero_cached_feature(cached_feature_type):
     if cached_feature_type == gb.gpu_cached_feature and (
-        F._default_context_str != "gpu"
-        or torch.cuda.get_device_capability()[0] < 7
+        F._default_context_str != "gpu" or torch.cuda.get_device_capability()[0] < 7
     ):
         pytest.skip(
             "GPUCachedFeature tests are available only when testing the GPU backend."
@@ -35,9 +31,7 @@ def test_hetero_cached_feature(cached_feature_type):
 
     for i in range(1024):
         etype = i % len(a)
-        ids = torch.randint(
-            0, (etype + 1) * 10 - 1, ((etype + 1) * 4,), device=device
-        )
+        ids = torch.randint(0, (etype + 1) * 10 - 1, ((etype + 1) * 4,), device=device)
         feature_key = ("node", str(etype), "feat")
         ref = a[feature_key].read(ids)
         val = cached_a[feature_key].read(ids)

@@ -7,10 +7,7 @@ import numpy as np
 import pytest
 import torch
 
-if not F.is_hip():
-    import dgl.graphbolt as gb
-else:
-    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
+import dgl.graphbolt as gb
 
 
 def to_on_disk_numpy(test_dir, name, t):
@@ -173,9 +170,7 @@ def test_cpu_cached_disk_feature_read_async(dtype):
     with tempfile.TemporaryDirectory() as test_dir:
         path = to_on_disk_numpy(test_dir, "tensor", a)
 
-        feat_store = gb.cpu_cached_feature(
-            gb.DiskBasedFeature(path=path), cache_size
-        )
+        feat_store = gb.cpu_cached_feature(gb.DiskBasedFeature(path=path), cache_size)
 
         # Test read feature.
         for ids in [ids1, ids2]:

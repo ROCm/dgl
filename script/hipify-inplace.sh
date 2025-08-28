@@ -79,7 +79,7 @@ for src in ${all_srcs[@]}; do
         s@\bcuda::::min@min@
         s@\bcuda::proclaim_return_type@proclaim_return_type@
         s@\bDGL_USE_CUDA\b@DGL_USE_ROCM@g
-        s@\bGRAPHBOLT_USE_CUDA\b@GRAPHBOLT_USE_ROCM@g
+        s@\bGRAPHBOLT_USE_CUDA\b@GRAPHBOLT_USE_HIP@g
         s@\bCUB_VERSION\b@HIPCUB_VERSION@g
         s@\bCUDART_ZERO_BF16\b@HIPRT_ZERO_BF16@g
         s@\bCUDART_INF_BF16\b@HIPRT_INF_BF16@g

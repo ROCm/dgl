@@ -8,10 +8,7 @@ import numpy as np
 import pytest
 import torch
 
-if not F.is_hip():
-    import dgl.graphbolt as gb
-else:
-    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
+import dgl.graphbolt as gb
 
 
 def to_on_disk_numpy(test_dir, name, t):
@@ -56,9 +53,7 @@ def _reason_to_skip_cached_feature():
 @pytest.mark.parametrize("cache_size_b", [1, 1024])
 def test_gpu_cached_feature(dtype, cache_size_a, cache_size_b):
     a = torch.tensor([[1, 2, 3], [4, 5, 6]], dtype=dtype, pin_memory=True)
-    b = torch.tensor(
-        [[[1, 2], [3, 4]], [[4, 5], [6, 7]]], dtype=dtype, pin_memory=True
-    )
+    b = torch.tensor([[[1, 2], [3, 4]], [[4, 5], [6, 7]]], dtype=dtype, pin_memory=True)
 
     cache_size_a *= a[:1].element_size() * a[:1].numel()
     cache_size_b *= b[:1].element_size() * b[:1].numel()
@@ -77,9 +72,7 @@ def test_gpu_cached_feature(dtype, cache_size_a, cache_size_b):
     )
     assert torch.equal(
         feat_store_b.read(torch.tensor([1, 1]).to("cuda")),
-        torch.tensor([[[4, 5], [6, 7]], [[4, 5], [6, 7]]], dtype=dtype).to(
-            "cuda"
-        ),
+        torch.tensor([[[4, 5], [6, 7]], [[4, 5], [6, 7]]], dtype=dtype).to("cuda"),
     )
     assert torch.equal(
         feat_store_a.read(torch.tensor([1, 1]).to("cuda")),
@@ -107,9 +100,7 @@ def test_gpu_cached_feature(dtype, cache_size_a, cache_size_b):
     assert feat_store_b.count() == b.size(0)
 
     # Test update the entire feature.
-    feat_store_a.update(
-        torch.tensor([[0, 1, 2], [3, 5, 2]], dtype=dtype).to("cuda")
-    )
+    feat_store_a.update(torch.tensor([[0, 1, 2], [3, 5, 2]], dtype=dtype).to("cuda"))
     assert torch.equal(
         feat_store_a.read(),
         torch.tensor([[0, 1, 2], [3, 5, 2]], dtype=dtype).to("cuda"),

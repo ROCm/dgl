@@ -5,15 +5,11 @@ import backend as F
 import pytest
 import torch
 
-if not F.is_hip():
-    import dgl.graphbolt as gb
-else:
-    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
+import dgl.graphbolt as gb
 
 
 @unittest.skipIf(
-    F._default_context_str != "gpu"
-    or torch.cuda.get_device_capability()[0] < 7,
+    F._default_context_str != "gpu" or torch.cuda.get_device_capability()[0] < 7,
     reason=(
         "GPUCachedFeature tests are available only when testing the GPU backend."
         if F._default_context_str != "gpu"
@@ -60,9 +56,9 @@ def test_gpu_graph_cache(indptr_dtype, dtype, cache_size, with_edge_ids):
     )
 
     for i in range(10):
-        keys = (
-            torch.arange(2, dtype=indices_dtype, device=F.ctx()) + i * 2
-        ) % (indptr.size(0) - 1)
+        keys = (torch.arange(2, dtype=indices_dtype, device=F.ctx()) + i * 2) % (
+            indptr.size(0) - 1
+        )
         missing_keys, replace = g.query(keys)
         (
             missing_indptr,

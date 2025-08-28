@@ -4,10 +4,7 @@ import dgl.sparse as dglsp
 import pytest
 import torch
 
-if not F.is_hip():
-    import dgl.graphbolt as gb
-else:
-    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
+import dgl.graphbolt as gb
 
 
 def test_integration_link_prediction():

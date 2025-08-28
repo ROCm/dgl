@@ -7,10 +7,7 @@ import backend as F
 import pytest
 import torch
 
-if not F.is_hip():
-    import dgl.graphbolt as gb
-else:
-    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
+import dgl.graphbolt as gb
 
 WORLD_SIZE = 7
 
@@ -58,9 +55,7 @@ def test_rank_sort_and_unique_and_compact(dtype, rank):
         assert_equal(nodes1[idx1], nodes4[idx4])
         for i in range(WORLD_SIZE):
             j = (i - rank + WORLD_SIZE) % WORLD_SIZE
-            assert_equal(
-                nodes1[off1[j] : off1[j + 1]], nodes4[off4[i] : off4[i + 1]]
-            )
+            assert_equal(nodes1[off1[j] : off1[j + 1]], nodes4[off4[i] : off4[i + 1]])
 
     unique, compacted, offsets = gb.unique_and_compact(
         nodes_list1[:1], rank, WORLD_SIZE
