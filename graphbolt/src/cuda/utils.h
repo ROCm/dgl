@@ -22,8 +22,14 @@ namespace cuda {
 inline int compute_capability(
     int device = cuda::GetCurrentStream().device_index()) {
   int sm_version;
+#ifdef GRAPHBOLT_USE_HIP
+  // SmVersion unsupported. Assume the normally desired features
+  // are available.
+  return 70;
+#else
   CUDA_RUNTIME_CHECK(cub::SmVersion(sm_version, device));
   return sm_version / 10;
+#endif
 };
 
 /**

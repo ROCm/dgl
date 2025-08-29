@@ -3,33 +3,29 @@ project(graphbolt C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Hipify the graphbolt source code using
-if (USE_HIP)
-  include(../cmake/modules/dgl_hipify.cmake)
-  hipify(CUDA_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-endif(USE_HIP)
-
-include(../cmake/CPM.cmake)
-
 if (USE_HIP)
   message(STATUS "Build graphbolt with HIP support")
+  # Hipify the graphbolt source code using
+  # include(../cmake/modules/dgl_hipify.cmake)
+  # hipify(CUDA_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/cuda)
+
   enable_language(HIP) 
+  # Add macro definitions 
   add_definitions(-DGRAPHBOLT_USE_HIP)
   add_definitions(-DDGL_USE_HIP)
   add_definitions(-DHIP_ENABLE_WARP_SYNC_BUILTINS)
 
   # Dependencies
   ## ROCm-DS dependencies
-  # CPMAddPackage("gh:github.com:ROCm/libhipcxx#release/2.2.x")
   find_package(libhipcxx REQUIRED)
   find_package(cuco REQUIRED)
-  # Pulls in libhipcxx
-  # CPMAddPackage("gh:ROCm/hipcollections#release/0.2.x")
 
   ## rocm-libraries dependencies
   find_package(rocprim REQUIRED)
   find_package(hipcub REQUIRED)
   find_package(rocthrust REQUIRED)
+  # TODO this is a sledgehammer approach
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 elseif(USE_CUDA)
   message(STATUS "Build graphbolt with CUDA support")
   enable_language(CUDA)
@@ -72,6 +68,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g3 -ggdb")
 
 set(LIB_GRAPHBOLT_NAME "graphbolt_pytorch_${TORCH_VER}")
+
+#
+# Additional options
+#
 option(BUILD_WITH_TASKFLOW "Use taskflow as parallel backend" ON)
 option(USE_OPENMP "Use OpenMP for graphbolt" ON)
 option(USE_LIBURING "Build graphbolt with liburing support" ON)
@@ -79,11 +79,17 @@ option(USE_LIBURING "Build graphbolt with liburing support" ON)
 #
 # Graph Bolt Core Library
 #
+
+
 set(BOLT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(BOLT_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 file(GLOB BOLT_HEADERS ${BOLT_INCLUDE})
+file(GLOB BOLT_SRC ${BOLT_DIR}/*.cc)
+
+#
+# Configure GPU support
+#
 if(USE_CUDA)
-  file(GLOB BOLT_SRC ${BOLT_DIR}/*.cc)
   file(GLOB BOLT_CUDA_SRC
     ${BOLT_DIR}/cuda/*.cu
     ${BOLT_DIR}/cuda/*.cc
@@ -103,7 +109,7 @@ if(USE_CUDA)
   set(LIB_GRAPHBOLT_CUDA_NAME "${LIB_GRAPHBOLT_NAME}_cuda")
   add_library(${LIB_GRAPHBOLT_NAME} SHARED ${BOLT_SRC} ${BOLT_HEADERS})
 elseif(USE_HIP)
-  file(GLOB BOLT_SRC ${BOLT_DIR}/*_hip.cc)
+  # file(GLOB BOLT_SRC ${BOLT_DIR}/*_hip.cc)
   # TODO brittle way to include the missing src files
   list(APPEND BOLT_SRC
     "${BOLT_DIR}/concurrent_id_hash_map.cc"
@@ -111,9 +117,8 @@ elseif(USE_HIP)
     "${BOLT_DIR}/shared_memory.cc"
   )
   file(GLOB BOLT_HIP_SRC
-    ${BOLT_DIR}/hip/*.cu
-    ${BOLT_DIR}/hip/*.cc  
-    ${BOLT_DIR}/hip/*.hip
+    ${BOLT_DIR}/cuda/*.cu
+    ${BOLT_DIR}/cuda/*.cc  
   )
   list(APPEND BOLT_SRC ${BOLT_HIP_SRC})
   #if(DEFINED ENV{ROCMARCHS})
@@ -225,9 +230,8 @@ if(USE_CUDA)
 
 elseif(USE_HIP)
   file(GLOB LIB_GRAPHBOLT_HIP_SRC
-    ${BOLT_DIR}/hip/extension/*.cu
-    ${BOLT_DIR}/hip/extension/*.cc
-    ${BOLT_DIR}/hip/extension/*.hip
+    ${BOLT_DIR}/cuda/extension/*.cu
+    ${BOLT_DIR}/cuda/extension/*.cc
     ../third_party/HugeCTR/gpu_cache/src/nv_gpu_cache.cu
   )
   message(STATUS "LIB_GRAPHBOLT_HIP_SRC: ${LIB_GRAPHBOLT_HIP_SRC}")

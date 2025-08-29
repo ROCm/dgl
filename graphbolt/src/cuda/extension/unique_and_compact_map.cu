@@ -23,9 +23,18 @@
 #include <thrust/iterator/transform_iterator.h>
 #include <thrust/iterator/transform_output_iterator.h>
 
+#ifdef GRAPHBOLT_USE_HIP
+#include <hipcub/hipcub.hpp>
+#include <cuco/cuda_stream_ref.hpp>
+namespace cuda{
+    using stream_ref = cuco::cuda_stream_ref;
+}
+#define C10_CUDA_KERNEL_LAUNCH_CHECK C10_HIP_KERNEL_LAUNCH_CHECK
+#else
 #include <cub/cub.cuh>
-#include <cuco/static_map.cuh>
 #include <cuda/functional>
+#endif
+#include <cuco/static_map.cuh>
 #include <cuda/std/atomic>
 #include <cuda/std/utility>
 #include <cuda/stream_ref>
@@ -200,8 +209,12 @@ UniqueAndCompactBatchedHashMapBased(
         cub::ArgIndexInputIterator index_it(indexes.data_ptr<int32_t>());
         auto input_it = thrust::make_transform_iterator(
             index_it,
-            ::cuda::proclaim_return_type<
-                ::cuda::std::tuple<int64_t*, index_t, int32_t, bool>>(
+            #ifdef GRAPHBOLT_USE_HIP
+            ::proclaim_return_type
+            #else
+            ::cuda::proclaim_return_type
+            #endif
+            <::cuda::std::tuple<int64_t*, index_t, int32_t, bool>>(
                 [=, map = map.ref(cuco::find)] __device__(auto it)
                     -> ::cuda::std::tuple<int64_t*, index_t, int32_t, bool> {
                   const auto i = it.key;
@@ -234,7 +247,12 @@ UniqueAndCompactBatchedHashMapBased(
         auto unique_ids_offsets_dev_ptr =
             unique_ids_offsets_dev.data_ptr<int64_t>();
         auto output_it = thrust::make_tabulate_output_iterator(
-            ::cuda::proclaim_return_type<void>(
+            #ifdef GRAPHBOLT_USE_HIP
+            ::proclaim_return_type
+            #else
+            ::cuda::proclaim_return_type
+            #endif
+            <void>(
                 [=, unique_ids_ptr = unique_ids.data_ptr<index_t>(),
                  part_ids_ptr =
                      part_ids ? part_ids->data_ptr<cuda::part_t>() : nullptr,
@@ -258,7 +276,12 @@ UniqueAndCompactBatchedHashMapBased(
             DeviceSelect::If, input_it, output_it,
             unique_ids_offsets_dev_ptr + num_batches,
             offsets_ptr[2 * num_batches],
-            ::cuda::proclaim_return_type<bool>([] __device__(const auto& t) {
+            #ifdef GRAPHBOLT_USE_HIP
+            ::proclaim_return_type
+            #else
+            ::cuda::proclaim_return_type
+            #endif
+            <bool>([] __device__(const auto& t) {
               return ::cuda::std::get<3>(t);
             }));
         auto unique_ids_offsets = torch::empty(
@@ -277,7 +300,12 @@ UniqueAndCompactBatchedHashMapBased(
                       thrust::make_zip_iterator(
                           unique_ids_offsets_dev2.data_ptr<int64_t>(),
                           unique_ids_offsets.data_ptr<int64_t>()),
-                      ::cuda::proclaim_return_type<
+                      #ifdef GRAPHBOLT_USE_HIP
+            ::proclaim_return_type
+            #else
+            ::cuda::proclaim_return_type
+            #endif
+            <
                           thrust::tuple<int64_t, int64_t>>(
                           [=] __device__(const auto x) {
                             return thrust::make_tuple(x, x);

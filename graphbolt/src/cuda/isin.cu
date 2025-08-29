@@ -19,9 +19,11 @@
  */
 #include <graphbolt/cuda_ops.h>
 #include <thrust/binary_search.h>
-
+#ifdef __HIPCC__
+#include <hipcub/hipcub.hpp>
+#else
 #include <cub/cub.cuh>
-
+#endif
 #include "./common.h"
 
 namespace graphbolt {

@@ -22,7 +22,16 @@
 #include <thrust/transform.h>
 
 #include <cstddef>
+#ifdef GRAPHBOLT_USE_HIP
+#include <hipcub/hipcub.hpp>
+#include <cuco/cuda_stream_ref.hpp>
+namespace cuda{
+    using stream_ref = cuco::cuda_stream_ref;
+}
+#define C10_CUDA_KERNEL_LAUNCH_CHECK C10_HIP_KERNEL_LAUNCH_CHECK
+#else
 #include <cub/cub.cuh>
+#endif
 #include <cuco/static_map.cuh>
 #include <cuda/std/atomic>
 #include <cuda/stream_ref>
@@ -340,7 +349,7 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> GpuGraphCache::Replace(
               const auto missing_edge_ids =
                   edge_id_offsets ? edge_tensors.back().data_ptr<indptr_t>()
                                   : nullptr;
-              CUB_CALL(DeviceFor::Bulk, num_buffers, [=] __device__(int64_t i) {
+              CUB_CALL(Bulk, num_buffers, [=] __device__(int64_t i) {
                 const auto tensor_idx = i / num_nodes;
                 const auto idx = i % num_nodes;
                 const auto pos = positions_ptr[idx];

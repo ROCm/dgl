@@ -47,7 +47,17 @@
 #include <ATen/hip/HIPEvent.h>
 #include <ATen/hip/impl/HIPGuardImplMasqueradingAsCUDA.h>
 #include <ATen/hip/impl/HIPStreamMasqueradingAsCUDA.h>
-#include <torch/csrc/api/include/torch/hip.h>
+#include <torch/csrc/api/include/torch/cuda.h>
+
+namespace c10::cuda {
+using CUDAStream = c10::hip::HIPStreamMasqueradingAsCUDA;
+using CUDAStreamGuard = c10::hip::HIPStreamGuardMasqueradingAsCUDA;
+
+inline auto getCurrentCUDAStream() {
+  return c10::hip::getCurrentHIPStreamMasqueradingAsCUDA();
+}
+}  // namespace c10::cuda
+
 #endif
 
 namespace graphbolt {
