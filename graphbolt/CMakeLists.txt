@@ -107,15 +107,7 @@ if(USE_CUDA)
     set(CMAKE_CUDA_ARCHITECTURES_FILTERED "70")
   endif()
   set(LIB_GRAPHBOLT_CUDA_NAME "${LIB_GRAPHBOLT_NAME}_cuda")
-  add_library(${LIB_GRAPHBOLT_NAME} SHARED ${BOLT_SRC} ${BOLT_HEADERS})
 elseif(USE_HIP)
-  # file(GLOB BOLT_SRC ${BOLT_DIR}/*_hip.cc)
-  # TODO brittle way to include the missing src files
-  list(APPEND BOLT_SRC
-    "${BOLT_DIR}/concurrent_id_hash_map.cc"
-    "${BOLT_DIR}/serialize.cc"
-    "${BOLT_DIR}/shared_memory.cc"
-  )
   file(GLOB BOLT_HIP_SRC
     ${BOLT_DIR}/cuda/*.cu
     ${BOLT_DIR}/cuda/*.cc  
@@ -127,7 +119,12 @@ elseif(USE_HIP)
   set(LIB_GRAPHBOLT_HIP_NAME "${LIB_GRAPHBOLT_NAME}_hip")
   set_source_files_properties(${BOLT_SRC} PROPERTIES LANGUAGE HIP)
   set_source_files_properties(${BOLT_HIP_SRC} PROPERTIES LANGUAGE HIP)
-  add_library(${LIB_GRAPHBOLT_NAME} SHARED ${BOLT_SRC} ${BOLT_HEADERS})
+endif()
+
+# The core graphbolt library.
+add_library(${LIB_GRAPHBOLT_NAME} SHARED ${BOLT_SRC} ${BOLT_HEADERS})
+
+if (USE_HIP)
   set_property(TARGET ${LIB_GRAPHBOLT_NAME} PROPERTY HIP_ARCHITECTURES ${ROCMARCHS})
 endif()
 
@@ -246,6 +243,8 @@ elseif(USE_HIP)
   set_target_properties(${LIB_GRAPHBOLT_HIP_NAME} PROPERTIES LINKER_LANGUAGE HIP)
   # Enables libcudacxx for gpu_cache. 
   target_compile_definitions(${LIB_GRAPHBOLT_HIP_NAME} PRIVATE LIBCUDACXX_VERSION)
+  # add_compile_definitions(LIBCUDACXX_VERSION) # TODO remove this didn't work either
+
   include_directories(AFTER "../third_party/HugeCTR/gpu_cache/include")
   message(STATUS "Build graphbolt extension with HugeCTR GPU embedding cache.")
 

@@ -20,7 +20,7 @@
         "CMAKE_HIP_ARCHITECTURES": "gfx90a,gfx942",
         "CMAKE_INSTALL_PREFIX": "/opt/rocm",
         "BUILD_CPP_TEST": "ON",
-        "CMAKE_HIP_FLAGS": "-ftime-trace",
+        "CMAKE_HIP_FLAGS": "-ftime-trace -use-ld=mold",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_PREFIX_PATH": "/opt/rocm/lib/cmake"
       }
