@@ -11,11 +11,8 @@ import pandas as pd
 import pytest
 import torch
 
-if not F.is_hip():
-    import dgl.graphbolt as gb
-    import dgl.graphbolt.internal as internal
-else:
-    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
+import dgl.graphbolt as gb
+import dgl.graphbolt.internal as internal
 
 
 def test_read_torch_data():

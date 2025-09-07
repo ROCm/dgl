@@ -12,11 +12,8 @@ import pytest
 import torch
 import torch.multiprocessing as mp
 
-if not F.is_hip():
-    import dgl.graphbolt as gb
-    from dgl.graphbolt.base import etype_str_to_tuple
-else:
-    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
+import dgl.graphbolt as gb
+from dgl.graphbolt.base import etype_str_to_tuple
 
 from scipy import sparse as spsp
 

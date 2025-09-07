@@ -15,11 +15,8 @@ import pytest
 import torch
 import yaml
 
-if not F.is_hip():
-    import dgl.graphbolt as gb
-    from dgl.graphbolt import GBWarning
-else:
-    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
+import dgl.graphbolt as gb
+from dgl.graphbolt import GBWarning
 
 from .. import gb_test_utils as gbt
 

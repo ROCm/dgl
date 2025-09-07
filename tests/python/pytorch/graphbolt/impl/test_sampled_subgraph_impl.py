@@ -6,11 +6,8 @@ import dgl
 import pytest
 import torch
 
-if not F.is_hip():
-    import dgl.graphbolt as gb
-    from dgl.graphbolt.impl.sampled_subgraph_impl import SampledSubgraphImpl
-else:
-    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
+import dgl.graphbolt as gb
+from dgl.graphbolt.impl.sampled_subgraph_impl import SampledSubgraphImpl
 
 
 def _assert_container_equal(lhs, rhs):

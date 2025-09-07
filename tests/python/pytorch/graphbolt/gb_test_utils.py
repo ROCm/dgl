@@ -9,10 +9,6 @@ import pytest
 import scipy.sparse as sp
 import torch
 
-# if not F.is_hip():
-#     import dgl.graphbolt as gb
-# else:
-#     pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
 import dgl.graphbolt as gb
 
 
