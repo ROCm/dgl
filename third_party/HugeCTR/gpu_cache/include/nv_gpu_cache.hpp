@@ -28,8 +28,12 @@
 #endif
 
 #define SET_ASSOCIATIVITY 2
-#ifdef __HIPCC__
-#define SLAB_SIZE warpSize
+#ifdef __HIPCC__ // TODO should we use DGL_USE_HIP instead?
+// TODO: Properly for portable HIP code, this should be determined at runtime,
+// but there's a lot of code that assumes this is a compile-time constant, so
+// for now we're hardcoding it. See
+// https://rocm.docs.amd.com/projects/HIP/en/latest/how-to/hip_cpp_language_extensions.html#warpsize
+#define SLAB_SIZE 64
 #else
 #define SLAB_SIZE 32
 #endif

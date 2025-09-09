@@ -36,6 +36,13 @@ __forceinline__ __device__ long long atomicAdd(
       (unsigned long long*)address, (unsigned long long)val);
 }
 
+// Defining this causes this error:
+// /.../dgl/third_party/HugeCTR/gpu_cache/src/nv_gpu_cache.cu:33:42: error: redefinition of 'atomicAdd'
+//    33 | __forceinline__ __device__ unsigned long atomicAdd(unsigned long* address, unsigned long val) {
+//       |                                          ^
+// /opt/rocm-6.2.3/lib/llvm/bin/../../../include/hip/amd_detail/amd_hip_atomic.h:240:15: note: previous definition is here
+//   240 | unsigned long atomicAdd(unsigned long* address, unsigned long val) {
+//       |      
 #ifndef DGL_USE_HIP
 __forceinline__ __device__ unsigned long atomicAdd(
     unsigned long* address, unsigned long val) {
@@ -359,7 +366,7 @@ __global__ void get_kernel(
 
       // Compare the slab data with the target key
       int found_lane =
-          __ffs((unsigned int)warp_tile.ballot(read_key == next_key)) - 1;
+          __ffs(static_cast<unsigned int>(warp_tile.ballot(read_key == next_key))) - 1;
 
       // If found, mark hit task, copy the founded data, the task is completed
       if (found_lane >= 0) {
@@ -410,7 +417,10 @@ __global__ void get_kernel(
   // After warp_tile complete the working queue, save the result for output
   // First thread of the warp_tile accumulate the missing length to global
   // variable
-  size_t warp_position;
+  // variable TODO(nod-ai/dgl#14): clang miscompiles if this isn't initialized
+  // even though the shfl instructions are marked with maybe_undef. Figure out
+  // whether this is indeed a clang bug and remove this initialization.
+  size_t warp_position = 0;
   if (lane_idx == 0) {
     warp_position = atomicAdd(d_missing_len, (size_t)warp_missing_counter);
   }
@@ -513,7 +523,7 @@ __global__ void get_kernel(
 
       // Compare the slab data with the target key
       int found_lane =
-          __ffs((unsigned int)warp_tile.ballot(read_key == next_key)) - 1;
+          __ffs(static_cast<unsigned int>(warp_tile.ballot(read_key == next_key))) - 1;
 
       // If found, mark hit task, copy the founded data, the task is completed
       if (found_lane >= 0) {
@@ -689,7 +699,7 @@ __global__ void insert_replace_kernel(
 
       // Compare the slab data with the target key
       int found_lane =
-          __ffs((unsigned int)warp_tile.ballot(read_key == next_key)) - 1;
+          __ffs(static_cast<unsigned int>(warp_tile.ballot(read_key == next_key))) - 1;
 
       // If found target key, the insertion/replace is no longer needed.
       // Refresh the slot, the task is completed
@@ -709,7 +719,7 @@ __global__ void insert_replace_kernel(
       // Compare the slab data with empty key.
       // If found empty key, do insertion,the task is complete
       found_lane =
-          __ffs((unsigned int)warp_tile.ballot(read_key == empty_key)) - 1;
+          __ffs(static_cast<unsigned int>(warp_tile.ballot(read_key == empty_key))) - 1;
       if (found_lane >= 0) {
         size_t found_offset =
             (next_set * set_associativity + next_slab) * warp_size + found_lane;
@@ -864,7 +874,7 @@ __global__ void insert_replace_kernel(
 
       // Compare the slab data with the target key
       int found_lane =
-          __ffs((unsigned int)warp_tile.ballot(read_key == next_key)) - 1;
+          __ffs(static_cast<unsigned int>(warp_tile.ballot(read_key == next_key))) - 1;
 
       // If found target key, the insertion/replace is no longer needed.
       // Refresh the slot, the task is completed
@@ -883,7 +893,7 @@ __global__ void insert_replace_kernel(
       // Compare the slab data with empty key.
       // If found empty key, do insertion,the task is complete
       found_lane =
-          __ffs((unsigned int)warp_tile.ballot(read_key == empty_key)) - 1;
+          __ffs(static_cast<unsigned int>(warp_tile.ballot(read_key == empty_key))) - 1;
       if (found_lane >= 0) {
         size_t found_offset =
             (next_set * set_associativity + next_slab) * warp_size + found_lane;
@@ -1004,7 +1014,7 @@ __global__ void update_kernel(
 
       // Compare the slab data with the target key
       int found_lane =
-          __ffs((unsigned int)warp_tile.ballot(read_key == next_key)) - 1;
+          __ffs(static_cast<unsigned int>(warp_tile.ballot(read_key == next_key))) - 1;
 
       // If found, mark hit task, update the value, the task is completed
       if (found_lane >= 0) {
@@ -1122,7 +1132,7 @@ __global__ void update_kernel(
 
       // Compare the slab data with the target key
       int found_lane =
-          __ffs((unsigned int)warp_tile.ballot(read_key == next_key)) - 1;
+          __ffs(static_cast<unsigned int>(warp_tile.ballot(read_key == next_key))) - 1;
 
       // If found, mark hit task, update the value, the task is completed
       if (found_lane >= 0) {

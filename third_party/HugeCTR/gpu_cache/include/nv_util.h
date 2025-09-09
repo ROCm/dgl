@@ -15,7 +15,7 @@
  */
 #pragma once
 
-#if defined(__HIPCC__)
+#if defined(__HIPCC__) // TODO should we use DGL_USE_HIP instead?
 #include <hip/hip_fp16.h>
 #include <hip/hip_fp8.h>
 #include <hip/hip_runtime_api.h>
@@ -81,7 +81,7 @@ inline int get_dev(const void* ptr) {
 #if DGL_USE_HIP
   if (attr.type == cudaMemoryTypeDevice)
 #else
-#if CUDART_VERSION >= 10000
+#if not defined(CUDART_VERSION) || CUDART_VERSION >= 10000
   if (attr.type == cudaMemoryTypeDevice)
 #else
   if (attr.memoryType == cudaMemoryTypeDevice)
