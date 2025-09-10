@@ -20,9 +20,20 @@
         "CMAKE_HIP_ARCHITECTURES": "gfx90a,gfx942",
         "CMAKE_INSTALL_PREFIX": "/opt/rocm",
         "BUILD_CPP_TEST": "ON",
-        "CMAKE_HIP_FLAGS": "-ftime-trace -use-ld=mold",
+        "CMAKE_HIP_FLAGS": "-ftime-trace",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_PREFIX_PATH": "/opt/rocm/lib/cmake"
+      }
+    },
+    {
+      "name": "rocm-llvm",
+      "description": "Build with ROCm and LLVM for host compiler",
+      "inherits": ["rocm"],
+      "cacheVariables": {
+        "CMAKE_C_COMPILER":"clang",
+        "CMAKE_CXX_COMPILER":"clang++",
+        "CMAKE_C_FLAGS": "-ftime-trace",
+        "CMAKE_CXX_FLAGS": "-ftime-trace"
       }
     }
   ]
