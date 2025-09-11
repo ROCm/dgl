@@ -7,4 +7,4 @@
 #include "common_cuda.h"
 #endif
 
-#endif // GRAPHBOLT_CUDA_COMMON_H_
+#endif  // GRAPHBOLT_CUDA_COMMON_H_

@@ -1,9 +1,9 @@
 import backend as F
 
+import dgl.graphbolt as gb
+
 import pytest
 import torch
-
-import dgl.graphbolt as gb
 
 
 @pytest.mark.parametrize(
@@ -11,7 +11,8 @@ import dgl.graphbolt as gb
 )
 def test_hetero_cached_feature(cached_feature_type):
     if cached_feature_type == gb.gpu_cached_feature and (
-        F._default_context_str != "gpu" or torch.cuda.get_device_capability()[0] < 7
+        F._default_context_str != "gpu"
+        or torch.cuda.get_device_capability()[0] < 7
     ):
         pytest.skip(
             "GPUCachedFeature tests are available only when testing the GPU backend."
@@ -30,10 +31,12 @@ def test_hetero_cached_feature(cached_feature_type):
     # ROCm doesn't support 8bit atomics, so the cache key becomes twice as big.
     cache_size_bytes = 2**19 if torch.version.hip else 2**18
     cached_a = cached_feature_type(a, cache_size_bytes)
-    
+
     for i in range(1024):
         etype = i % len(a)
-        ids = torch.randint(0, (etype + 1) * 10 - 1, ((etype + 1) * 4,), device=device)
+        ids = torch.randint(
+            0, (etype + 1) * 10 - 1, ((etype + 1) * 4,), device=device
+        )
         feature_key = ("node", str(etype), "feat")
         ref = a[feature_key].read(ids)
         val = cached_a[feature_key].read(ids)

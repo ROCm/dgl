@@ -24,13 +24,12 @@
 // checks if this is defined rather than checking the value.
 #undef CUDART_VERSION
 
-#include <dgl/hip/cuda_to_hip.h>
 #include <ATen/hip/HIPEvent.h>
 #include <ATen/hip/impl/HIPCachingAllocatorMasqueradingAsCUDA.h>
-#include <c10/hip/HIPException.h>
 #include <ATen/hip/impl/HIPStreamMasqueradingAsCUDA.h>
+#include <c10/hip/HIPException.h>
+#include <dgl/hip/cuda_to_hip.h>
 #include <hip/hip_runtime.h>
-
 #include <thrust/execution_policy.h>
 #include <torch/script.h>
 
@@ -98,7 +97,9 @@ struct CUDAWorkspaceAllocator {
 
 inline auto GetAllocator() { return CUDAWorkspaceAllocator{}; }
 
-inline auto GetCurrentStream() { return c10::hip::getCurrentHIPStreamMasqueradingAsCUDA(); }
+inline auto GetCurrentStream() {
+  return c10::hip::getCurrentHIPStreamMasqueradingAsCUDA();
+}
 
 template <typename T>
 inline bool is_zero(T size) {
@@ -112,41 +113,44 @@ inline bool is_zero<dim3>(dim3 size) {
 
 #define CUDA_RUNTIME_CHECK(EXPR)                           \
   do {                                                     \
-    hipError_t __err = EXPR;                              \
-    if (__err != hipSuccess) {                            \
-      auto get_error_str_err = hipGetErrorString(__err);  \
+    hipError_t __err = EXPR;                               \
+    if (__err != hipSuccess) {                             \
+      auto get_error_str_err = hipGetErrorString(__err);   \
       AT_ERROR("CUDA runtime error: ", get_error_str_err); \
     }                                                      \
   } while (0)
 
 #define CUDA_CALL(func) C10_HIP_CHECK((func))
 
-#define CUDA_KERNEL_CALL(kernel, nblks, nthrs, shmem, ...)          \
-  {                                                                 \
-    if (!graphbolt::cuda::is_zero((nblks)) &&                       \
-        !graphbolt::cuda::is_zero((nthrs))) {                       \
-      auto stream = graphbolt::cuda::GetCurrentStream();            \
-     hipLaunchKernelGGL(( (kernel)), dim3((nblks)), dim3((nthrs)), (shmem), stream, __VA_ARGS__); \
-      C10_HIP_KERNEL_LAUNCH_CHECK();                               \
-    }                                                               \
+#define CUDA_KERNEL_CALL(kernel, nblks, nthrs, shmem, ...)           \
+  {                                                                  \
+    if (!graphbolt::cuda::is_zero((nblks)) &&                        \
+        !graphbolt::cuda::is_zero((nthrs))) {                        \
+      auto stream = graphbolt::cuda::GetCurrentStream();             \
+      hipLaunchKernelGGL(                                            \
+          ((kernel)), dim3((nblks)), dim3((nthrs)), (shmem), stream, \
+          __VA_ARGS__);                                              \
+      C10_HIP_KERNEL_LAUNCH_CHECK();                                 \
+    }                                                                \
   }
 
-#define CUB_CALL(fn, ...)                                                     \
-  {                                                                           \
-    auto allocator = graphbolt::cuda::GetAllocator();                         \
-    auto stream = graphbolt::cuda::GetCurrentStream();                        \
-    size_t workspace_size = 0;                                                \
-    CUDA_CALL(hipcub::fn(nullptr, workspace_size, __VA_ARGS__, stream));         \
-    auto workspace = allocator.AllocateStorage<char>(workspace_size);         \
-    CUDA_CALL(hipcub::fn(workspace.get(), workspace_size, __VA_ARGS__, stream)); \
+#define CUB_CALL(fn, ...)                                                  \
+  {                                                                        \
+    auto allocator = graphbolt::cuda::GetAllocator();                      \
+    auto stream = graphbolt::cuda::GetCurrentStream();                     \
+    size_t workspace_size = 0;                                             \
+    CUDA_CALL(hipcub::fn(nullptr, workspace_size, __VA_ARGS__, stream));   \
+    auto workspace = allocator.AllocateStorage<char>(workspace_size);      \
+    CUDA_CALL(                                                             \
+        hipcub::fn(workspace.get(), workspace_size, __VA_ARGS__, stream)); \
   }
 
-#define THRUST_CALL(fn, ...)                                                 \
-  [&] {                                                                      \
-    auto allocator = graphbolt::cuda::GetAllocator();                        \
-    auto stream = graphbolt::cuda::GetCurrentStream();                       \
+#define THRUST_CALL(fn, ...)                                                \
+  [&] {                                                                     \
+    auto allocator = graphbolt::cuda::GetAllocator();                       \
+    auto stream = graphbolt::cuda::GetCurrentStream();                      \
     const auto exec_policy = thrust::hip::par_nosync(allocator).on(stream); \
-    return thrust::fn(exec_policy, __VA_ARGS__);                             \
+    return thrust::fn(exec_policy, __VA_ARGS__);                            \
   }()
 
 /**
@@ -164,7 +168,8 @@ template <typename scalar_t>
 struct CopyScalar {
   CopyScalar() : is_ready_(true) { init_pinned_storage(); }
 
-  void record(at::hip::HIPStreamMasqueradingAsCUDA stream = GetCurrentStream()) {
+  void record(
+      at::hip::HIPStreamMasqueradingAsCUDA stream = GetCurrentStream()) {
     copy_event_.record(stream);
     is_ready_ = false;
   }
