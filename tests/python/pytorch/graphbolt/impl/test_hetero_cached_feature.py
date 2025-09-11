@@ -27,8 +27,10 @@ def test_hetero_cached_feature(cached_feature_type):
         )
         for i in range(75)
     }
-    cached_a = cached_feature_type(a, 2**18)
-
+    # ROCm doesn't support 8bit atomics, so the cache key becomes twice as big.
+    cache_size_bytes = 2**19 if torch.version.hip else 2**18
+    cached_a = cached_feature_type(a, cache_size_bytes)
+    
     for i in range(1024):
         etype = i % len(a)
         ids = torch.randint(0, (etype + 1) * 10 - 1, ((etype + 1) * 4,), device=device)

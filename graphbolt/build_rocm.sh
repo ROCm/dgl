@@ -5,6 +5,7 @@
 # Helper script to build graphbolt libraries for PyTorch
 set -euo pipefail
 GRAPHBOLT_SRCDIR=$(dirname $0)
+# We build directly in our primary build directory
 GRAPHBOLT_BINDIR=$BINDIR/graphbolt
 GRAPHBOLT_BUILD_DIR=$GRAPHBOLT_BINDIR
 
@@ -23,7 +24,6 @@ echo "graphbolt cmake flags: $CMAKE_FLAGS"
 if [ $# -eq 0 ]; then
   $CMAKE_COMMAND $CMAKE_FLAGS -S $GRAPHBOLT_SRCDIR -B $GRAPHBOLT_BUILD_DIR
   cmake --build $GRAPHBOLT_BUILD_DIR --parallel
-  # cp -v $CPSOURCE $GRAPHBOLT_BINDIR
 else
   for PYTHON_INTERP in $@; do
     TORCH_VER=$($PYTHON_INTERP -c 'import torch; print(torch.__version__.split("+")[0])')
@@ -31,7 +31,6 @@ else
     cd $TORCH_VER
     $CMAKE_COMMAND $CMAKE_FLAGS -DPYTHON_INTERP=$PYTHON_INTERP -S $GRAPHBOLT_SRCDIR -B $GRAPHBOLT_BUILD_DIR
     cmake --build $GRAPHBOLT_BUILD_DIR --parallel
-    # cp -v $CPSOURCE $GRAPHBOLT_BINDIR
     cd ..
   done
 fi

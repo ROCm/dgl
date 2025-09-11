@@ -5,10 +5,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (USE_HIP)
   message(STATUS "Build graphbolt with HIP support")
-  # Hipify the graphbolt source code using
-  # include(../cmake/modules/dgl_hipify.cmake)
-  # hipify(CUDA_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/cuda)
-
   enable_language(HIP) 
   # Add macro definitions 
   add_definitions(-DGRAPHBOLT_USE_HIP)
@@ -136,9 +132,8 @@ include_directories(BEFORE ${BOLT_DIR}
                            # `std::atomic_ref`, `std::counting_semaphore`
                            "../third_party/pcg/include"
                            "../third_party/tsl_robin_map/include")
-if (USE_HIP)
-# TODO ?? Nothing here?
-else()
+if (NOT USE_HIP)
+# For HIP builds, we include libhipcxx below
 include_directories(BEFORE # For CXX20 features:
                            # `std::atomic_ref`, `std::counting_semaphore`
                            "../third_party/cccl/libcudacxx/include")
@@ -247,13 +242,6 @@ elseif(USE_HIP)
 
   include_directories(AFTER "../third_party/HugeCTR/gpu_cache/include")
   message(STATUS "Build graphbolt extension with HugeCTR GPU embedding cache.")
-
-  # message(STATUS "Use external CCCL library for a consistent API and performance for graphbolt.")
-  # include_directories(BEFORE
-  #                     "../third_party/cccl/thrust"
-  #                     "../third_party/cccl/cub"
-  #                     "../third_party/cuco/include")
-
   include_directories(
     $<TARGET_PROPERTY:cuco::cuco,INTERFACE_INCLUDE_DIRECTORIES>
     $<TARGET_PROPERTY:hip::hipcub,INTERFACE_INCLUDE_DIRECTORIES>
