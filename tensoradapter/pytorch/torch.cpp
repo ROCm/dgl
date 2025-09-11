@@ -28,7 +28,7 @@ TA_EXPORTS void CPURawDelete(void* ptr) {
 
 #if defined DGL_USE_CUDA || defined DGL_USE_HIP
 TA_EXPORTS void* CUDARawAlloc(size_t nbytes, cudaStream_t stream) {
-  at::globalContext().lazyInitCUDA();
+  at::globalContext().lazyInitDevice(at::kCUDA);
   return c10::cuda::CUDACachingAllocator::raw_alloc_with_stream(nbytes, stream);
 }
 

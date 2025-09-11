@@ -20,7 +20,7 @@ CMAKE_FLAGS="-DPYTORCH_ROCM_ARCH=${PYTORCH_ROCM_ARCH} -DUSE_HIP=${USE_HIP}"
 if [ $# -eq 0 ]; then
         echo "$CMAKE_COMMAND $CMAKE_FLAGS"
         $CMAKE_COMMAND $CMAKE_FLAGS ..
-        make -j
+        cmake --build .
         cp -v $CPSOURCE $BINDIR/tensoradapter/pytorch
 else
         for PYTHON_INTERP in $@; do
@@ -29,7 +29,7 @@ else
                 cd $TORCH_VER
         echo "torch=$TORCH_VER $CMAKE_COMMAND $CMAKE_FLAGS -DPYTHON_INTERP=$PYTHON_INTERP ../.."
                 $CMAKE_COMMAND $CMAKE_FLAGS -DPYTHON_INTERP=$PYTHON_INTERP ../..
-                make -j
+                cmake --build .
                 cp -v $CPSOURCE $BINDIR/tensoradapter/pytorch
                 cd ..
         done

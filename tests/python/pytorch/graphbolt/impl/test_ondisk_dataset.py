@@ -44,6 +44,13 @@ def write_yaml_and_load_dataset(yaml_content, dir, force_preprocess=False):
     )
 
 
+def load_sampling_graph(test_dir, processed_dataset):
+    return torch.load(
+        os.path.join(test_dir, processed_dataset["graph_topology"]["path"]),
+        weights_only=False,
+    )
+
+
 def test_OnDiskDataset_TVTSet_exceptions():
     """Test excpetions thrown when parsing TVTSet."""
     with tempfile.TemporaryDirectory() as test_dir:
@@ -1173,8 +1180,8 @@ def test_OnDiskDataset_preprocess_homogeneous(edge_fmt):
         assert "graph" not in processed_dataset
         assert "graph_topology" in processed_dataset
 
-        fused_csc_sampling_graph = torch.load(
-            os.path.join(test_dir, processed_dataset["graph_topology"]["path"])
+        fused_csc_sampling_graph = load_sampling_graph(
+            test_dir, processed_dataset
         )
         assert fused_csc_sampling_graph.total_num_nodes == num_nodes
         assert fused_csc_sampling_graph.total_num_edges == num_edges
@@ -1226,8 +1233,8 @@ def test_OnDiskDataset_preprocess_homogeneous(edge_fmt):
         )
         with open(output_file, "rb") as f:
             processed_dataset = yaml.load(f, Loader=yaml.Loader)
-        fused_csc_sampling_graph = torch.load(
-            os.path.join(test_dir, processed_dataset["graph_topology"]["path"])
+        fused_csc_sampling_graph = load_sampling_graph(
+            test_dir, processed_dataset
         )
         assert (
             fused_csc_sampling_graph.edge_attributes is not None
@@ -1371,8 +1378,8 @@ def test_OnDiskDataset_preprocess_homogeneous_hardcode(
         assert "graph" not in processed_dataset
         assert "graph_topology" in processed_dataset
 
-        fused_csc_sampling_graph = torch.load(
-            os.path.join(test_dir, processed_dataset["graph_topology"]["path"])
+        fused_csc_sampling_graph = load_sampling_graph(
+            test_dir, processed_dataset
         )
         assert fused_csc_sampling_graph.total_num_nodes == num_nodes
         assert fused_csc_sampling_graph.total_num_edges == num_edges
@@ -1581,8 +1588,8 @@ def test_OnDiskDataset_preprocess_heterogeneous_hardcode(
         assert "graph" not in processed_dataset
         assert "graph_topology" in processed_dataset
 
-        fused_csc_sampling_graph = torch.load(
-            os.path.join(test_dir, processed_dataset["graph_topology"]["path"])
+        fused_csc_sampling_graph = load_sampling_graph(
+            test_dir, processed_dataset
         )
         assert fused_csc_sampling_graph.total_num_nodes == 5
         assert fused_csc_sampling_graph.total_num_edges == 10

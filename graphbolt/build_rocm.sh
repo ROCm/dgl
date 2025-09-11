@@ -20,7 +20,7 @@ echo "graphbolt cmake flags: $CMAKE_FLAGS"
 
 if [ $# -eq 0 ]; then
   $CMAKE_COMMAND $CMAKE_FLAGS ..
-  make -j
+  cmake --build . --parallel
   cp -v $CPSOURCE $BINDIR/graphbolt
 else
   for PYTHON_INTERP in $@; do
@@ -28,7 +28,7 @@ else
     mkdir -p $TORCH_VER
     cd $TORCH_VER
     $CMAKE_COMMAND $CMAKE_FLAGS -DPYTHON_INTERP=$PYTHON_INTERP ../..
-    make -j
+    cmake --build . --parallel
     cp -v $CPSOURCE $BINDIR/graphbolt
     cd ..
   done
