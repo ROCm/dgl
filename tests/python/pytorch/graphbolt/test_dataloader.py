@@ -67,7 +67,7 @@ def test_DataLoader(overlap_feature_fetch):
 @pytest.mark.parametrize("enable_feature_fetch", [True, False])
 @pytest.mark.parametrize("overlap_feature_fetch", [True, False])
 @pytest.mark.parametrize("overlap_graph_fetch", [True, False])
-@pytest.mark.parametrize("cooperative", [False])  # TODO: enable cooperative
+@pytest.mark.parametrize("cooperative", [True, False])
 @pytest.mark.parametrize("asynchronous", [True, False])
 @pytest.mark.parametrize("num_gpu_cached_edges", [0, 1024])
 @pytest.mark.parametrize("gpu_cache_threshold", [1, 3])
@@ -81,6 +81,8 @@ def test_gpu_sampling_DataLoader(
     num_gpu_cached_edges,
     gpu_cache_threshold,
 ):
+    if cooperative and F.is_hip():
+        pytest.skip("Cooperative fetching is not supported on ROCm.")
     if cooperative and not thd.is_initialized():
         # On Windows, the init method can only be file.
         init_method = (
