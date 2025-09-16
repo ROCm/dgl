@@ -27,7 +27,7 @@ docker build \
 ## 3. Build from source with docker image
 
 ```bash
-docker build -t dgl_build -f Dockerfile.rocm .
+docker build -t dgl_build -f Dockerfile.ci_gpu_rocm .
 docker run \
   --cap-add=SYS_PTRACE \
   --ipc=host \
