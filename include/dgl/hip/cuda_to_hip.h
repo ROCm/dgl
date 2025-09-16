@@ -71,6 +71,7 @@ using cudaStream_t = hipStream_t;
 #define CUresult hipError_t
 
 #define __nv_bfloat16 __hip_bfloat16
+#define nv_bfloat16 hip_bfloat16
 #define __nv_fp8_e4m3 __hip_fp8_e4m3
 #define __nv_fp8_e5m2 __hip_fp8_e5m2
 #define __float2bfloat16_rn __float2bfloat16

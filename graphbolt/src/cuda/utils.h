@@ -25,6 +25,8 @@ inline int compute_capability(
 #ifdef GRAPHBOLT_USE_HIP
   // SmVersion unsupported. Assume the normally desired features
   // are available.
+  // This is used to limit the features in the code. For ROCm/HIP,
+  // we hardcode a value so all features are available.
   return 70;
 #else
   CUDA_RUNTIME_CHECK(cub::SmVersion(sm_version, device));

@@ -487,15 +487,10 @@ c10::intrusive_ptr<sampling::FusedSampledSubgraph> SampleNeighbors(
                     "Selected edge_id_t must be capable of storing edge_ids.");
                 // Using bfloat16 for random numbers works just as reliably as
                 // float32 and provides around 30% speedup.
-#ifdef GRAPHBOLT_USE_HIP
-                using rnd_t = hip_bfloat16;
-#else
-                using rnd_t = nv_bfloat16;
-#endif
                 auto randoms =
-                    allocator.AllocateStorage<rnd_t>(num_edges.value());
+                    allocator.AllocateStorage<nv_bfloat16>(num_edges.value());
                 auto randoms_sorted =
-                    allocator.AllocateStorage<rnd_t>(num_edges.value());
+                    allocator.AllocateStorage<nv_bfloat16>(num_edges.value());
                 auto edge_id_segments =
                     allocator.AllocateStorage<edge_id_t>(num_edges.value());
                 auto sorted_edge_id_segments =
