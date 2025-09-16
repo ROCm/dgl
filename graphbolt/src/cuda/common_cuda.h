@@ -20,32 +20,45 @@
 #ifndef GRAPHBOLT_CUDA_COMMON_CUDA_H_
 #define GRAPHBOLT_CUDA_COMMON_CUDA_H_
 
-#ifdef __HIPCC__
-
-#include <ATen/hip/HIPEvent.h>
-#include <ATen/hip/impl/HIPCachingAllocatorMasqueradingAsCUDA.h>
-#include <c10/hip/HIPException.h>
-#include <ATen/hip/impl/HIPStreamMasqueradingAsCUDA.h>
-#include <hip/hip_runtime.h>
-
-#include <dgl/hip/cuda_to_hip.h>
+#ifdef DGL_USE_HIP
 
 // hipCollections defines this with 0, but Torch sometimes
 // checks if this is defined rather than checking the value.
 #undef CUDART_VERSION
-#else
+
+
+#include <ATen/hip/HIPEvent.h>
+#include <ATen/hip/impl/HIPCachingAllocatorMasqueradingAsCUDA.h>
+#include <ATen/hip/impl/HIPStreamMasqueradingAsCUDA.h>
+#include <c10/hip/HIPException.h>
+#include <dgl/hip/cuda_to_hip.h>
+#include <hip/hip_runtime.h>
+
+using namespace c10::hip;
+using GPUStream_t = at::hip::HIPStreamMasqueradingAsCUDA;
+#define THRUST_BACKEND thrust::hip
+
+
+#else // CUDA
+
 #include <ATen/cuda/CUDAEvent.h>
 #include <c10/cuda/CUDACachingAllocator.h>
 #include <c10/cuda/CUDAException.h>
 #include <c10/cuda/CUDAStream.h>
 #include <cuda_runtime.h>
-#endif
+
+using namespace c10::cuda;
+using GPUStream_t = at::cuda::CUDAStream;
+#define THRUST_BACKEND thrust::cuda
+
+#endif // DGL_USE_HIP
 
 #include <thrust/execution_policy.h>
 #include <torch/script.h>
 
 #include <memory>
 #include <unordered_map>
+
 
 namespace graphbolt {
 namespace cuda {
@@ -84,13 +97,13 @@ struct CUDAWorkspaceAllocator {
   CUDAWorkspaceAllocator& operator=(const CUDAWorkspaceAllocator&) = default;
 
   void operator()(void* ptr) const {
-    c10::cuda::CUDACachingAllocator::raw_delete(ptr);
+   CUDACachingAllocator::raw_delete(ptr);
   }
 
   // Required by thrust to satisfy allocator requirements.
   value_type* allocate(std::ptrdiff_t size) const {
     return reinterpret_cast<value_type*>(
-        c10::cuda::CUDACachingAllocator::raw_alloc(size * sizeof(value_type)));
+       CUDACachingAllocator::raw_alloc(size * sizeof(value_type)));
   }
 
   // Required by thrust to satisfy allocator requirements.
@@ -101,14 +114,21 @@ struct CUDAWorkspaceAllocator {
       std::size_t size) const {
     return std::unique_ptr<T, CUDAWorkspaceAllocator>(
         reinterpret_cast<T*>(
-            c10::cuda::CUDACachingAllocator::raw_alloc(sizeof(T) * size)),
+           CUDACachingAllocator::raw_alloc(sizeof(T) * size)),
         *this);
   }
 };
 
 inline auto GetAllocator() { return CUDAWorkspaceAllocator{}; }
 
-inline auto GetCurrentStream() { return c10::cuda::getCurrentCUDAStream(); }
+inline auto GetCurrentStream() { 
+    #if defined(DGL_USE_HIP)
+    return getCurrentHIPStreamMasqueradingAsCUDA();
+    #else
+    return getCurrentCUDAStream();
+    #endif
+
+}
 
 template <typename T>
 inline bool is_zero(T size) {
@@ -155,7 +175,7 @@ inline bool is_zero<dim3>(dim3 size) {
   [&] {                                                                      \
     auto allocator = graphbolt::cuda::GetAllocator();                        \
     auto stream = graphbolt::cuda::GetCurrentStream();                       \
-    const auto exec_policy = thrust::cuda::par_nosync(allocator).on(stream); \
+    const auto exec_policy = THRUST_BACKEND::par_nosync(allocator).on(stream); \
     return thrust::fn(exec_policy, __VA_ARGS__);                             \
   }()
 
@@ -174,7 +194,7 @@ template <typename scalar_t>
 struct CopyScalar {
   CopyScalar() : is_ready_(true) { init_pinned_storage(); }
 
-  void record(at::cuda::CUDAStream stream = GetCurrentStream()) {
+  void record(GPUStream_t stream = GetCurrentStream()) {
     copy_event_.record(stream);
     is_ready_ = false;
   }
