@@ -5,19 +5,19 @@
 # # Stage 1: Build DGL
 # # TODO: Need to figure how to pass build/ install directories for
 # #       the build.
-ARG BASE_IMAGE=rocm/pytorch:rocm6.4_ubuntu22.04_py3.10_pytorch_release_2.4.1
+ARG BASE_IMAGE=rocm/pytorch:rocm6.4_ubuntu24.04_py3.12_pytorch_release_2.6.0
 FROM ${BASE_IMAGE} AS dgl_build
 
-ARG ARG_CONDA_ENV=py_3.10
-ARG ARG_MAX_JOBS=8
+ARG ARG_CONDA_ENV=py_3.12
+ARG ARG_MAX_JOBS=24
 
 ENV CONDA_DEFAULT_ENV=${ARG_CONDA_ENV}
 ENV CONDA_PREFIX="/opt/conda/envs/${ARG_CONDA_ENV}"
 ENV PATH="${CONDA_PREFIX}/bin:$PATH"
-ENV MAX_JOBS=${ARG_MAX_JOBS:-8}
+ENV MAX_JOBS=${ARG_MAX_JOBS:-24}
 
 RUN apt-get update \
-    && apt install -y clang-format-15
+    && apt install -y clang-format-15 ninja-build
 
 # Use bash shell for all RUN commands
 SHELL ["/bin/bash", "-c"]
@@ -51,6 +51,9 @@ ENV DGL_BUILD_DIR="${DGL_SRC_DIR}/build"
 ENV DGL_BUILD_TYPE="dev"
 ENV DGL_ARTIFACTS_DIR="/tmp/artifacts"
 
+# Install GraphBolt dependencies
+RUN mkdir -p deps && cd deps && bash ${DGL_SRC_DIR}/install_graphbolt_deps.sh
+
 # TODO: Need to move out build dependencies in setup.py / pyproject.toml
 RUN echo "DGL_SRC_DIR: ${DGL_SRC_DIR}" \
     && echo "DGL_BUILD_DIR: ${DGL_BUILD_DIR}" \
@@ -70,18 +73,14 @@ RUN echo "DGL_SRC_DIR: ${DGL_SRC_DIR}" \
                 Cython==3.0.12 ufmt==2.8.0 torchmetrics==1.7.2 \
     && echo "Installing DGL build dependencies..." \
     && echo "Building DGL with ROCm support..." \
-    && mkdir -p ${DGL_BUILD_DIR} && cd ${DGL_BUILD_DIR} \
-    && cmake \
-       -DBUILD_TYPE=${DGL_BUILD_TYPE} \
-       -DUSE_HIP=ON \
-       -DGPU_TARGETS=${GPU_BUILD_TARGETS} \
-       -DROCM_TARGET_ARCH=${GPU_BUILD_TARGETS} \
-       -DCMAKE_INSTALL_PREFIX="/opt/rocm" \
-       -S ${DGL_SRC_DIR} \
-       -B ${DGL_BUILD_DIR} \
-    && make -j ${MAX_JOBS}
+    && mkdir -p ${DGL_BUILD_DIR} && cd ${DGL_SRC_DIR} \
+    && cmake --preset rocm \
+    && cmake --build ${DGL_BUILD_DIR} --parallel ${MAX_JOBS}
 
-RUN cd ${DGL_SRC_DIR}/python \
+RUN conda init \
+    && eval "$(conda shell.bash hook)" \
+    && conda activate ${ARG_CONDA_ENV} \
+    && cd ${DGL_SRC_DIR}/python \
     && python setup-amd.py bdist_wheel build_ext --inplace \
     && mkdir -p ${DGL_ARTIFACTS_DIR} \
     && cp dist/*.whl ${DGL_ARTIFACTS_DIR}
@@ -100,14 +99,14 @@ ENV DGL_ARTIFACTS_DIR="/tmp/artifacts"
 RUN mkdir -p ${DGL_ARTIFACTS_DIR}
 COPY --from=dgl_build /tmp/artifacts/*.whl ${DGL_ARTIFACTS_DIR}
 
-ARG ARG_CONDA_ENV=py_3.10
+ARG ARG_CONDA_ENV=py_3.12
 
 ENV CONDA_DEFAULT_ENV=${ARG_CONDA_ENV}
 ENV CONDA_PREFIX="/opt/conda/envs/${ARG_CONDA_ENV}"
 ENV PATH="${CONDA_PREFIX}/bin:$PATH"
 
 RUN apt-get update \
-    && apt install -y clang-format-15
+    && apt install -y clang-format-15 ninja-build
 
 # Use bash shell for all RUN commands
 SHELL ["/bin/bash", "-c"]

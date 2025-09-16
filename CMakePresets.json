@@ -20,9 +20,12 @@
         "CMAKE_HIP_ARCHITECTURES": "gfx90a,gfx942",
         "CMAKE_INSTALL_PREFIX": "/opt/rocm",
         "BUILD_CPP_TEST": "ON",
-        "CMAKE_HIP_FLAGS": "-ftime-trace",
+        "CMAKE_C_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_CXX_FLAGS": "-fdiagnostics-color=always",
+        "CMAKE_HIP_FLAGS": "-ftime-trace -fdiagnostics-color=always",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "CMAKE_PREFIX_PATH": "/opt/rocm/lib/cmake"
+        "CMAKE_PREFIX_PATH": "/opt/rocm/lib/cmake",
+        "CMAKE_COLOR_DIAGNOSTICS": "ON"
       }
     },
     {
