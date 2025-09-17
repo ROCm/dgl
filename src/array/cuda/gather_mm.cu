@@ -316,7 +316,7 @@ void GatherMM(
   const int64_t tot_num_rows = A->shape[0];
   const int ntx = 128;
 #if defined(__HIPCC__)
-  const int warp_size = warpSize;
+  const int warp_size = 64;
 #else
   const int warp_size = 32;
 #endif
@@ -354,7 +354,7 @@ void GatherMMScatter(
   int64_t tot_num_rows = A->shape[0];
   const int ntx = 128;
 #ifdef __HIPCC__
-  const int warp_size = warpSize;
+  const int warp_size = 64;
 #else
   const int warp_size = 32;
 #endif

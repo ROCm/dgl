@@ -630,7 +630,7 @@ CSRMatrix CSRSliceMatrix(
   // Execute SegmentMaskColKernel
   const int64_t num_rows = csr.num_rows;
 #ifdef __HIPCC__
-  constexpr int WARP_SIZE = warpSize;
+  constexpr int WARP_SIZE = 64;
   // With a simple fine-tuning, TILE_SIZE=16 gives a good performance.
 #else
   constexpr int WARP_SIZE = 32;

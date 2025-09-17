@@ -47,7 +47,7 @@ class GpuCache : public runtime::Object {
   constexpr static int set_associativity = 2;
   // WARP_SIZE Changes for __HIPCC__ result in errors. [TODO]
 #ifdef __HIPCC__
-  constexpr static int WARP_SIZE = warpSize;
+  constexpr static int WARP_SIZE = 64;
 #else
   constexpr static int WARP_SIZE = 32;
 #endif

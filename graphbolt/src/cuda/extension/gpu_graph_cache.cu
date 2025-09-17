@@ -23,10 +23,10 @@
 
 #include <cstddef>
 #ifdef GRAPHBOLT_USE_HIP
-#include <hipcub/hipcub.hpp>
 #include <cuco/cuda_stream_ref.hpp>
-namespace cuda{
-    using stream_ref = cuco::cuda_stream_ref;
+#include <hipcub/hipcub.hpp>
+namespace cuda {
+using stream_ref = cuco::cuda_stream_ref;
 }
 #define C10_CUDA_KERNEL_LAUNCH_CHECK C10_HIP_KERNEL_LAUNCH_CHECK
 #else
@@ -349,7 +349,7 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> GpuGraphCache::Replace(
               const auto missing_edge_ids =
                   edge_id_offsets ? edge_tensors.back().data_ptr<indptr_t>()
                                   : nullptr;
-              CUB_CALL(Bulk, num_buffers, [=] __device__(int64_t i) {
+              CUB_CALL(DeviceFor::Bulk, num_buffers, [=] __device__(int64_t i) {
                 const auto tensor_idx = i / num_nodes;
                 const auto idx = i % num_nodes;
                 const auto pos = positions_ptr[idx];
@@ -503,10 +503,12 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> GpuGraphCache::Replace(
               }
               if (edge_id_offsets) {
                 // Append the edge ids as the last element of the output.
-                output_edge_tensors.push_back(ops::IndptrEdgeIdsImpl(
-                    output_indptr, output_indptr.scalar_type(),
-                    *edge_id_offsets,
-                    static_cast<int64_t>(static_cast<indptr_t>(output_size))));
+                output_edge_tensors.push_back(
+                    ops::IndptrEdgeIdsImpl(
+                        output_indptr, output_indptr.scalar_type(),
+                        *edge_id_offsets,
+                        static_cast<int64_t>(
+                            static_cast<indptr_t>(output_size))));
               }
 
               {
@@ -523,12 +525,27 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> GpuGraphCache::Replace(
                     });
                 constexpr int64_t max_copy_at_once =
                     std::numeric_limits<int32_t>::max();
+
+#ifdef __HIPCC__
+                // ROCm has lower local memory limits, use smaller batch sizes
+                // to avoid "local memory exceeds limit" errors
+                constexpr int64_t rocm_max_batch_size = 1024;
+                for (int64_t i = 0; i < num_buffers; i += rocm_max_batch_size) {
+                  const auto batch_size =
+                      std::min(num_buffers - i, rocm_max_batch_size);
+                  CUB_CALL(
+                      DeviceMemcpy::Batched, input.get() + i,
+                      output_buffer_it + i, input_size_ptr + i,
+                      static_cast<uint32_t>(batch_size));
+                }
+#else
                 for (int64_t i = 0; i < num_buffers; i += max_copy_at_once) {
                   CUB_CALL(
                       DeviceMemcpy::Batched, input.get() + i,
                       output_buffer_it + i, input_size_ptr + i,
                       std::min(num_buffers - i, max_copy_at_once));
                 }
+#endif
               }
 
               return std::make_tuple(output_indptr, output_edge_tensors);

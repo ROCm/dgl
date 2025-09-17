@@ -104,7 +104,8 @@ torch::Tensor ExpandIndptrImpl(
 
                     const auto num_rows = indptr.size(0) - 1;
                     constexpr int64_t max_copy_at_once =
-                        std::numeric_limits<int32_t>::max();
+                        // std::numeric_limits<int32_t>::max();
+                        1;
 
                     if (is_edge_ids_variant) {
                       auto input_buffer = thrust::make_transform_iterator(

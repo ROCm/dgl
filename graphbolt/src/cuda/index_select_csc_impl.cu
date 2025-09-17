@@ -239,12 +239,28 @@ void IndexSelectCSCCopyIndices(
       iota, ConvertToBytes<indptr_t, indices_t>{in_degree});
   constexpr int64_t max_copy_at_once = std::numeric_limits<int32_t>::max();
 
+#ifdef __HIPCC__
+  // ROCm has lower local memory limits, use smaller batch sizes
+  // to avoid "local memory exceeds limit" errors
+  constexpr int64_t rocm_max_batch_size = 1024;
+#endif
+
   // Performs the copy from indices into output_indices.
+#ifdef __HIPCC__
+  // For ROCm, use a simpler approach with smaller batches
+  for (int64_t i = 0; i < num_nodes; i += rocm_max_batch_size) {
+    const auto batch_size = std::min(num_nodes - i, rocm_max_batch_size);
+    CUB_CALL(
+        DeviceMemcpy::Batched, input_buffer_it + i, output_buffer_it + i,
+        buffer_sizes + i, static_cast<uint32_t>(batch_size));
+  }
+#else
   for (int64_t i = 0; i < num_nodes; i += max_copy_at_once) {
     CUB_CALL(
         DeviceMemcpy::Batched, input_buffer_it + i, output_buffer_it + i,
         buffer_sizes + i, std::min(num_nodes - i, max_copy_at_once));
   }
+#endif
 }
 
 std::tuple<torch::Tensor, torch::Tensor> DeviceIndexSelectCSCImpl(
