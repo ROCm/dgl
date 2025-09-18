@@ -1,9 +1,9 @@
 import backend as F
 
+import dgl.graphbolt as gb
+
 import pytest
 import torch
-
-import dgl.graphbolt as gb
 
 
 def _test_query_and_replace(policy1, policy2, keys, offset):
@@ -61,7 +61,9 @@ def _test_query_and_replace(policy1, policy2, keys, offset):
 @pytest.mark.parametrize("policy", ["s3-fifo", "sieve", "lru", "clock"])
 @pytest.mark.parametrize("offset", [0, 1111111])
 def test_feature_cache(offsets, dtype, feature_size, num_parts, policy, offset):
-    cache_size = 32 * (torch.get_num_threads() if num_parts is None else num_parts)
+    cache_size = 32 * (
+        torch.get_num_threads() if num_parts is None else num_parts
+    )
     a = torch.randint(0, 2, [1024, feature_size], dtype=dtype)
     cache = gb.impl.CPUFeatureCache(
         (cache_size,) + a.shape[1:], a.dtype, policy, num_parts
@@ -78,7 +80,9 @@ def test_feature_cache(offsets, dtype, feature_size, num_parts, policy, offset):
     reader_fn = lambda keys: a[keys]
 
     keys = torch.tensor([0, 1])
-    values, missing_index, missing_keys, missing_offsets = cache.query(keys, offset)
+    values, missing_index, missing_keys, missing_offsets = cache.query(
+        keys, offset
+    )
     if not offsets:
         missing_offsets = None
     assert torch.equal(
@@ -90,14 +94,18 @@ def test_feature_cache(offsets, dtype, feature_size, num_parts, policy, offset):
     cache.replace(missing_keys, missing_values, missing_offsets, offset)
     values[missing_index] = missing_values
     assert torch.equal(values, a[keys])
-    assert torch.equal(cache2.query_and_replace(keys, reader_fn, offset), a[keys])
+    assert torch.equal(
+        cache2.query_and_replace(keys, reader_fn, offset), a[keys]
+    )
 
     _test_query_and_replace(policy1, policy2, keys, offset)
 
     pin_memory = F._default_context_str == "gpu"
 
     keys = torch.arange(1, 33, pin_memory=pin_memory)
-    values, missing_index, missing_keys, missing_offsets = cache.query(keys, offset)
+    values, missing_index, missing_keys, missing_offsets = cache.query(
+        keys, offset
+    )
     if not offsets:
         missing_offsets = None
     assert torch.equal(
@@ -110,11 +118,15 @@ def test_feature_cache(offsets, dtype, feature_size, num_parts, policy, offset):
     cache.replace(missing_keys, missing_values, missing_offsets, offset)
     values[missing_index] = missing_values
     assert torch.equal(values, a[keys])
-    assert torch.equal(cache2.query_and_replace(keys, reader_fn, offset), a[keys])
+    assert torch.equal(
+        cache2.query_and_replace(keys, reader_fn, offset), a[keys]
+    )
 
     _test_query_and_replace(policy1, policy2, keys, offset)
 
-    values, missing_index, missing_keys, missing_offsets = cache.query(keys, offset)
+    values, missing_index, missing_keys, missing_offsets = cache.query(
+        keys, offset
+    )
     if not offsets:
         missing_offsets = None
     assert torch.equal(missing_keys.flip([0]), torch.tensor([]))
@@ -123,11 +135,15 @@ def test_feature_cache(offsets, dtype, feature_size, num_parts, policy, offset):
     cache.replace(missing_keys, missing_values, missing_offsets, offset)
     values[missing_index] = missing_values
     assert torch.equal(values, a[keys])
-    assert torch.equal(cache2.query_and_replace(keys, reader_fn, offset), a[keys])
+    assert torch.equal(
+        cache2.query_and_replace(keys, reader_fn, offset), a[keys]
+    )
 
     _test_query_and_replace(policy1, policy2, keys, offset)
 
-    values, missing_index, missing_keys, missing_offsets = cache.query(keys, offset)
+    values, missing_index, missing_keys, missing_offsets = cache.query(
+        keys, offset
+    )
     if not offsets:
         missing_offsets = None
     assert torch.equal(missing_keys.flip([0]), torch.tensor([]))
@@ -136,7 +152,9 @@ def test_feature_cache(offsets, dtype, feature_size, num_parts, policy, offset):
     cache.replace(missing_keys, missing_values, missing_offsets, offset)
     values[missing_index] = missing_values
     assert torch.equal(values, a[keys])
-    assert torch.equal(cache2.query_and_replace(keys, reader_fn, offset), a[keys])
+    assert torch.equal(
+        cache2.query_and_replace(keys, reader_fn, offset), a[keys]
+    )
 
     _test_query_and_replace(policy1, policy2, keys, offset)
 

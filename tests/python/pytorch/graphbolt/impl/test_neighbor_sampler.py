@@ -3,10 +3,10 @@ from functools import partial
 
 import backend as F
 
+import dgl.graphbolt as gb
+
 import pytest
 import torch
-
-import dgl.graphbolt as gb
 
 
 def get_hetero_graph(include_original_edge_ids):
@@ -21,11 +21,15 @@ def get_hetero_graph(include_original_edge_ids):
     indices = torch.LongTensor([3, 5, 3, 4, 1, 2, 2, 1, 1, 2])
     type_per_edge = torch.LongTensor([1, 1, 1, 1, 0, 0, 0, 0, 0, 0])
     edge_attributes = {
-        "weight": torch.FloatTensor([2.5, 0, 8.4, 0, 0.4, 1.2, 2.5, 0, 8.4, 0.5]),
+        "weight": torch.FloatTensor(
+            [2.5, 0, 8.4, 0, 0.4, 1.2, 2.5, 0, 8.4, 0.5]
+        ),
         "mask": torch.BoolTensor([1, 0, 1, 0, 1, 1, 1, 0, 1, 1]),
     }
     if include_original_edge_ids:
-        edge_attributes[gb.ORIGINAL_EDGE_ID] = torch.arange(indices.size(0), 0, -1) - 1
+        edge_attributes[gb.ORIGINAL_EDGE_ID] = (
+            torch.arange(indices.size(0), 0, -1) - 1
+        )
     node_type_offset = torch.LongTensor([0, 1, 3, 6])
     return gb.fused_csc_sampling_graph(
         indptr,
@@ -66,7 +70,9 @@ def test_NeighborSampler_GraphFetch(
         gb.SubgraphSampler._preprocess, cooperative=False, async_op=False
     )
     datapipe = item_sampler.map(preprocess_fn)
-    datapipe = datapipe.map(partial(gb.NeighborSampler._prepare, graph.node_type_to_id))
+    datapipe = datapipe.map(
+        partial(gb.NeighborSampler._prepare, graph.node_type_to_id)
+    )
     sample_per_layer = gb.SamplePerLayer(
         datapipe, graph.sample_neighbors, fanout, False, prob_name, False
     )
@@ -144,8 +150,12 @@ def test_labor_dependent_minibatching(layer_dependency, overlap_graph_fetch):
         ].original_row_node_ids.size(0)
     delta = 0
     for i in range(batch_dependency):
-        res_current = res[i].sampled_subgraphs[-1].original_row_node_ids.tolist()
-        res_next = res[i + 1].sampled_subgraphs[-1].original_row_node_ids.tolist()
+        res_current = (
+            res[i].sampled_subgraphs[-1].original_row_node_ids.tolist()
+        )
+        res_next = (
+            res[i + 1].sampled_subgraphs[-1].original_row_node_ids.tolist()
+        )
         intersect_len = len(set(res_current).intersection(set(res_next)))
         assert intersect_len >= fanouts[-1]
         delta += 1 + fanouts[-1] - intersect_len

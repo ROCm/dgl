@@ -6,13 +6,13 @@ from functools import partial
 
 import backend as F
 
+import dgl.graphbolt as gb
+import dgl.graphbolt.internal as internal
+
 import numpy as np
 import pandas as pd
 import pytest
 import torch
-
-import dgl.graphbolt as gb
-import dgl.graphbolt.internal as internal
 
 
 def test_read_torch_data():

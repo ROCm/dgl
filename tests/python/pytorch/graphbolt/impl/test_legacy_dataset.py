@@ -1,10 +1,10 @@
 import backend as F
+
+import dgl.graphbolt as gb
 import pytest
 import torch
 from dgl import AddSelfLoop
 from dgl.data import AsNodePredDataset, CoraGraphDataset
-
-import dgl.graphbolt as gb
 
 
 def test_LegacyDataset_homo_node_pred():
@@ -27,9 +27,9 @@ def test_LegacyDataset_homo_node_pred():
     assert len(dataset.all_nodes_set) == num_nodes
     assert dataset.feature.size("node", None, "feat") == torch.Size([1433])
     assert (
-        dataset.feature.read("node", None, "feat", torch.tensor([num_nodes - 1])).size(
-            dim=0
-        )
+        dataset.feature.read(
+            "node", None, "feat", torch.tensor([num_nodes - 1])
+        ).size(dim=0)
         == 1
     )
     # Out of bound indexing results in segmentation fault instead of exception

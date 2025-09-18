@@ -3,10 +3,10 @@ import re
 import backend as F
 
 import dgl
-import pytest
-import torch
 
 import dgl.graphbolt as gb
+import pytest
+import torch
 
 
 def test_ItemSet_names():
@@ -47,7 +47,9 @@ def test_ItemSet_scalar_dtype(dtype):
         assert i == item
         assert item.dtype == dtype
     assert item_set[2] == torch.tensor(2, dtype=dtype)
-    assert torch.equal(item_set[slice(1, 4, 2)], torch.arange(1, 4, 2, dtype=dtype))
+    assert torch.equal(
+        item_set[slice(1, 4, 2)], torch.arange(1, 4, 2, dtype=dtype)
+    )
 
 
 def test_ItemSet_length():
@@ -78,11 +80,15 @@ def test_ItemSet_length():
             return iter([0, 1, 2])
 
     # Single iterable with invalid length.
-    with pytest.raises(TypeError, match="object of type 'InvalidLength' has no len()"):
+    with pytest.raises(
+        TypeError, match="object of type 'InvalidLength' has no len()"
+    ):
         item_set = gb.ItemSet(InvalidLength())
 
     # Tuple of iterables with invalid length.
-    with pytest.raises(TypeError, match="object of type 'InvalidLength' has no len()"):
+    with pytest.raises(
+        TypeError, match="object of type 'InvalidLength' has no len()"
+    ):
         item_set = gb.ItemSet((InvalidLength(), InvalidLength()))
 
 
@@ -292,7 +298,9 @@ def test_HeteroItemSet_length():
     item_set = gb.HeteroItemSet(
         {
             "user:like:item": gb.ItemSet((node_pairs_like, neg_dsts_like)),
-            "user:follow:user": gb.ItemSet((node_pairs_follow, neg_dsts_follow)),
+            "user:follow:user": gb.ItemSet(
+                (node_pairs_follow, neg_dsts_follow)
+            ),
         }
     )
     assert len(item_set) == node_pairs_like.size(0) + node_pairs_follow.size(0)
@@ -302,7 +310,9 @@ def test_HeteroItemSet_length():
             return iter([0, 1, 2])
 
     # Single iterable with invalid length.
-    with pytest.raises(TypeError, match="object of type 'InvalidLength' has no len()"):
+    with pytest.raises(
+        TypeError, match="object of type 'InvalidLength' has no len()"
+    ):
         item_set = gb.HeteroItemSet(
             {
                 "user": gb.ItemSet(InvalidLength()),
@@ -311,11 +321,17 @@ def test_HeteroItemSet_length():
         )
 
     # Tuple of iterables with invalid length.
-    with pytest.raises(TypeError, match="object of type 'InvalidLength' has no len()"):
+    with pytest.raises(
+        TypeError, match="object of type 'InvalidLength' has no len()"
+    ):
         item_set = gb.HeteroItemSet(
             {
-                "user:like:item": gb.ItemSet((InvalidLength(), InvalidLength())),
-                "user:follow:user": gb.ItemSet((InvalidLength(), InvalidLength())),
+                "user:like:item": gb.ItemSet(
+                    (InvalidLength(), InvalidLength())
+                ),
+                "user:follow:user": gb.ItemSet(
+                    (InvalidLength(), InvalidLength())
+                ),
             }
         )
 
@@ -368,9 +384,13 @@ def test_HeteroItemSet_iteration_seed_nodes():
     assert torch.equal(partial_data["item"], torch.tensor([8, 9, 7, 5]))
 
     # Exception cases.
-    with pytest.raises(AssertionError, match="Start must be smaller than stop."):
+    with pytest.raises(
+        AssertionError, match="Start must be smaller than stop."
+    ):
         _ = item_set[5:3]
-    with pytest.raises(AssertionError, match="Start must be smaller than stop."):
+    with pytest.raises(
+        AssertionError, match="Start must be smaller than stop."
+    ):
         _ = item_set[-1:3]
     with pytest.raises(IndexError, match="HeteroItemSet index out of range."):
         _ = item_set[20]
@@ -443,8 +463,12 @@ def test_HeteroItemSet_iteration_node_pairs_labels():
     node_pairs = torch.arange(0, 10).reshape(-1, 2)
     labels = torch.randint(0, 3, (5,))
     node_pairs_labels = {
-        "user:like:item": gb.ItemSet((node_pairs, labels), names=("seeds", "labels")),
-        "user:follow:user": gb.ItemSet((node_pairs, labels), names=("seeds", "labels")),
+        "user:like:item": gb.ItemSet(
+            (node_pairs, labels), names=("seeds", "labels")
+        ),
+        "user:follow:user": gb.ItemSet(
+            (node_pairs, labels), names=("seeds", "labels")
+        ),
     }
     expected_data = []
     for key, value in node_pairs_labels.items():
@@ -514,9 +538,7 @@ def test_HeteroItemSet_iteration_node_pairs_labels_indexes():
 def test_ItemSet_repr():
     # ItemSet with single name.
     item_set = gb.ItemSet(torch.arange(0, 5), names="seeds")
-    expected_str = (
-        "ItemSet(\n    items=(tensor([0, 1, 2, 3, 4]),),\n    names=('seeds',),\n)"
-    )
+    expected_str = "ItemSet(\n    items=(tensor([0, 1, 2, 3, 4]),),\n    names=('seeds',),\n)"
 
     assert str(item_set) == expected_str, item_set
 
@@ -631,4 +653,6 @@ def test_deprecation_alias():
     partial_data = item_set_dict[torch.tensor([8, 1, 0, 9, 7, 5])]
     assert len(list(partial_data.keys())) == 2
     assert torch.equal(partial_data["user"], hetero_item_set[1, 0]["user"])
-    assert torch.equal(partial_data["item"], hetero_item_set[8, 9, 7, 5]["item"])
+    assert torch.equal(
+        partial_data["item"], hetero_item_set[8, 9, 7, 5]["item"]
+    )

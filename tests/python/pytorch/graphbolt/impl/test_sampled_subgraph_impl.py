@@ -3,10 +3,10 @@ import unittest
 import backend as F
 
 import dgl
-import pytest
-import torch
 
 import dgl.graphbolt as gb
+import pytest
+import torch
 from dgl.graphbolt.impl.sampled_subgraph_impl import SampledSubgraphImpl
 
 

@@ -5,11 +5,11 @@ from collections.abc import Iterable, Mapping
 
 import backend as F
 
+import dgl.graphbolt as gb
+
 import pytest
 import torch
 from torch.torch_version import TorchVersion
-
-import dgl.graphbolt as gb
 
 from . import gb_test_utils
 
@@ -24,7 +24,9 @@ def test_pytorch_cuda_allocator_conf():
 @unittest.skipIf(F._default_context_str != "gpu", "CopyTo needs GPU to test")
 @pytest.mark.parametrize("non_blocking", [False, True])
 def test_CopyTo(non_blocking):
-    item_sampler = gb.ItemSampler(gb.ItemSet(torch.arange(20), names="seeds"), 4)
+    item_sampler = gb.ItemSampler(
+        gb.ItemSet(torch.arange(20), names="seeds"), 4
+    )
     if non_blocking:
         item_sampler = item_sampler.transform(lambda x: x.pin_memory())
 
@@ -201,7 +203,9 @@ def test_seed_type_str_to_ntypes():
     seed_type_str = ["user", "item"]
     with pytest.raises(
         AssertionError,
-        match=re.escape("Passed-in seed type should be string, but got <class 'list'>"),
+        match=re.escape(
+            "Passed-in seed type should be string, but got <class 'list'>"
+        ),
     ):
         _ = gb.seed_type_str_to_ntypes(seed_type_str, 2)
 
@@ -350,7 +354,9 @@ def test_indptr_edge_ids(offset, dtype):
     indptr = torch.tensor([0, 2, 2, 7, 10, 12], device=F.ctx())
     if offset:
         offset = indptr[:-1]
-        ref_result = torch.arange(0, indptr[-1].item(), dtype=dtype, device=F.ctx())
+        ref_result = torch.arange(
+            0, indptr[-1].item(), dtype=dtype, device=F.ctx()
+        )
     else:
         ref_result = torch.tensor(
             [0, 1, 0, 1, 2, 3, 4, 0, 1, 2, 0, 1], dtype=dtype, device=F.ctx()

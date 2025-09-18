@@ -1,9 +1,9 @@
 import backend as F
 import dgl
-import pytest
-import torch
 
 import dgl.graphbolt as gb
+import pytest
+import torch
 
 relation = "A:r:B"
 reverse_relation = "B:rr:A"
@@ -544,12 +544,15 @@ def create_hetero_minibatch():
 
 def check_dgl_blocks_hetero(minibatch, blocks):
     etype = gb.etype_str_to_tuple(relation)
-    sampled_csc = [subgraph.sampled_csc for subgraph in minibatch.sampled_subgraphs]
+    sampled_csc = [
+        subgraph.sampled_csc for subgraph in minibatch.sampled_subgraphs
+    ]
     original_edge_ids = [
         subgraph.original_edge_ids for subgraph in minibatch.sampled_subgraphs
     ]
     original_row_node_ids = [
-        subgraph.original_row_node_ids for subgraph in minibatch.sampled_subgraphs
+        subgraph.original_row_node_ids
+        for subgraph in minibatch.sampled_subgraphs
     ]
 
     for i, block in enumerate(blocks):
@@ -568,22 +571,29 @@ def check_dgl_blocks_hetero(minibatch, blocks):
     ).repeat_interleave(sampled_csc[0][reverse_relation].indptr.diff())
     assert torch.equal(edges[0], sampled_csc[0][reverse_relation].indices)
     assert torch.equal(edges[1], dst_ndoes)
-    assert torch.equal(blocks[0].srcdata[dgl.NID]["A"], original_row_node_ids[0]["A"])
-    assert torch.equal(blocks[0].srcdata[dgl.NID]["B"], original_row_node_ids[0]["B"])
+    assert torch.equal(
+        blocks[0].srcdata[dgl.NID]["A"], original_row_node_ids[0]["A"]
+    )
+    assert torch.equal(
+        blocks[0].srcdata[dgl.NID]["B"], original_row_node_ids[0]["B"]
+    )
 
 
 def check_dgl_blocks_homo(minibatch, blocks):
-    sampled_csc = [subgraph.sampled_csc for subgraph in minibatch.sampled_subgraphs]
+    sampled_csc = [
+        subgraph.sampled_csc for subgraph in minibatch.sampled_subgraphs
+    ]
     original_edge_ids = [
         subgraph.original_edge_ids for subgraph in minibatch.sampled_subgraphs
     ]
     original_row_node_ids = [
-        subgraph.original_row_node_ids for subgraph in minibatch.sampled_subgraphs
+        subgraph.original_row_node_ids
+        for subgraph in minibatch.sampled_subgraphs
     ]
     for i, block in enumerate(blocks):
-        dst_ndoes = torch.arange(0, len(sampled_csc[i].indptr) - 1).repeat_interleave(
-            sampled_csc[i].indptr.diff()
-        )
+        dst_ndoes = torch.arange(
+            0, len(sampled_csc[i].indptr) - 1
+        ).repeat_interleave(sampled_csc[i].indptr.diff())
         assert torch.equal(block.edges()[0], sampled_csc[i].indices)
         assert torch.equal(block.edges()[1], dst_ndoes)
         assert torch.equal(block.edata[dgl.EID], original_edge_ids[i])
@@ -651,7 +661,9 @@ def test_dgl_link_predication_hetero():
     minibatch = create_hetero_minibatch()
     minibatch.compacted_seeds = {
         relation: (torch.tensor([[1, 1, 2, 0, 1, 2], [1, 0, 1, 1, 0, 0]]).T,),
-        reverse_relation: (torch.tensor([[0, 1, 1, 2, 0, 2], [1, 0, 1, 1, 0, 0]]).T,),
+        reverse_relation: (
+            torch.tensor([[0, 1, 1, 2, 0, 2], [1, 0, 1, 1, 0, 0]]).T,
+        ),
     }
     minibatch.labels = {
         relation: (torch.tensor([1, 1, 0, 0, 0, 0]),),
@@ -734,6 +746,11 @@ def test_to_pyg_data():
     )
     try:
         pyg_data = test_minibatch.to_pyg_data()
-        assert pyg_data.x is None, "Multiple features case should raise an error."
+        assert (
+            pyg_data.x is None
+        ), "Multiple features case should raise an error."
     except AssertionError as e:
-        assert str(e) == "`to_pyg_data` only supports single feature homogeneous graph."
+        assert (
+            str(e)
+            == "`to_pyg_data` only supports single feature homogeneous graph."
+        )

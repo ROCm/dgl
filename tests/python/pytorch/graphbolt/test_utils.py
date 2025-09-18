@@ -6,10 +6,10 @@ from functools import partial
 import backend as F
 
 import dgl
-import pytest
-import torch
 
 import dgl.graphbolt as gb
+import pytest
+import torch
 
 
 def test_add_reverse_edges_homo():
@@ -114,8 +114,12 @@ def test_exclude_seed_edges_homo_cpu(use_datapipe):
             assert torch.equal(
                 sampled_subgraph.sampled_csc.indices, compacted_indices[step]
             )
-            assert torch.equal(sampled_subgraph.sampled_csc.indptr, indptr[step])
-            assert torch.equal(sampled_subgraph.original_column_node_ids, seeds[step])
+            assert torch.equal(
+                sampled_subgraph.sampled_csc.indptr, indptr[step]
+            )
+            assert torch.equal(
+                sampled_subgraph.original_column_node_ids, seeds[step]
+            )
 
 
 @unittest.skipIf(
@@ -143,7 +147,9 @@ def test_exclude_seed_edges_gpu(use_datapipe, async_op):
     if use_datapipe:
         datapipe = datapipe.exclude_seed_edges(asynchronous=async_op)
     else:
-        datapipe = datapipe.transform(partial(gb.exclude_seed_edges, async_op=async_op))
+        datapipe = datapipe.transform(
+            partial(gb.exclude_seed_edges, async_op=async_op)
+        )
     if torch.cuda.get_device_capability()[0] < 7:
         original_row_node_ids = [
             torch.tensor([0, 3, 4, 2, 5, 7]).to(F.ctx()),
@@ -189,8 +195,12 @@ def test_exclude_seed_edges_gpu(use_datapipe, async_op):
             assert torch.equal(
                 (sampled_subgraph.sampled_csc.indices), compacted_indices[step]
             )
-            assert torch.equal(sampled_subgraph.sampled_csc.indptr, indptr[step])
-            assert torch.equal(sampled_subgraph.original_column_node_ids, seeds[step])
+            assert torch.equal(
+                sampled_subgraph.sampled_csc.indptr, indptr[step]
+            )
+            assert torch.equal(
+                sampled_subgraph.original_column_node_ids, seeds[step]
+            )
 
 
 def get_hetero_graph():
@@ -277,11 +287,15 @@ def test_exclude_seed_edges_hetero():
         for step, sampled_subgraph in enumerate(data.sampled_subgraphs):
             for ntype in ["n1", "n2"]:
                 assert torch.equal(
-                    torch.sort(sampled_subgraph.original_row_node_ids[ntype])[0],
+                    torch.sort(sampled_subgraph.original_row_node_ids[ntype])[
+                        0
+                    ],
                     original_row_node_ids[step][ntype].to(F.ctx()),
                 )
                 assert torch.equal(
-                    torch.sort(sampled_subgraph.original_column_node_ids[ntype])[0],
+                    torch.sort(
+                        sampled_subgraph.original_column_node_ids[ntype]
+                    )[0],
                     original_column_node_ids[step][ntype].to(F.ctx()),
                 )
             for etype in ["n1:e1:n2", "n2:e2:n1"]:

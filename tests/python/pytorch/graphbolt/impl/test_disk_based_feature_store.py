@@ -5,11 +5,11 @@ from functools import partial
 
 import backend as F
 
+import dgl.graphbolt as gb
+
 import numpy as np
 import pytest
 import torch
-
-import dgl.graphbolt as gb
 
 
 def to_on_disk_numpy(test_dir, name, t):
@@ -128,7 +128,9 @@ def test_disk_based_feature():
     ],
 )
 @pytest.mark.parametrize("idtype", [torch.int32, torch.int64])
-@pytest.mark.parametrize("shape", [(10, 20), (20, 10), (20, 25, 10), (137, 50, 30)])
+@pytest.mark.parametrize(
+    "shape", [(10, 20), (20, 10), (20, 25, 10), (137, 50, 30)]
+)
 @pytest.mark.parametrize("index", [[0], [1, 2, 3], [0, 6, 2, 8]])
 def test_more_disk_based_feature(dtype, idtype, shape, index):
     if dtype == torch.complex128:

@@ -1,7 +1,7 @@
 import backend as F
-import pytest
 
 import dgl.graphbolt as gb
+import pytest
 
 
 def test_Dataset():
