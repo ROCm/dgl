@@ -1,11 +1,8 @@
 import backend as F
+
+import dgl.graphbolt as gb
 import pytest
 import torch
-
-if not F.is_hip():
-    import dgl.graphbolt as gb
-else:
-    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
 
 
 def test_find_reverse_edges_homo():

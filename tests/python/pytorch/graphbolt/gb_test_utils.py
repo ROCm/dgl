@@ -3,16 +3,13 @@ import os
 import backend as F
 
 import dgl
+
+import dgl.graphbolt as gb
 import numpy as np
 import pandas as pd
 import pytest
 import scipy.sparse as sp
 import torch
-
-if not F.is_hip():
-    import dgl.graphbolt as gb
-else:
-    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
 
 
 def rand_csc_graph(N, density, bidirection_edge=False):

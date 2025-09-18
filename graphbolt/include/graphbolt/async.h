@@ -37,11 +37,27 @@
 #include <type_traits>
 #endif
 
-#if defined(GRAPHBOLT_USE_CUDA) || defined(GRAPHBOLT_USE_HIP)
+#if defined(GRAPHBOLT_USE_CUDA)
 #include <ATen/cuda/CUDAEvent.h>
 #include <c10/cuda/CUDAGuard.h>
 #include <c10/cuda/CUDAStream.h>
 #include <torch/csrc/api/include/torch/cuda.h>
+#elif defined(GRAPHBOLT_USE_HIP)
+#include <dgl/hip/cuda_to_hip.h>
+#include <ATen/hip/HIPEvent.h>
+#include <ATen/hip/impl/HIPGuardImplMasqueradingAsCUDA.h>
+#include <ATen/hip/impl/HIPStreamMasqueradingAsCUDA.h>
+#include <torch/csrc/api/include/torch/cuda.h>
+
+namespace c10::cuda {
+using CUDAStream = c10::hip::HIPStreamMasqueradingAsCUDA;
+using CUDAStreamGuard = c10::hip::HIPStreamGuardMasqueradingAsCUDA;
+
+inline auto getCurrentCUDAStream() {
+  return c10::hip::getCurrentHIPStreamMasqueradingAsCUDA();
+}
+}  // namespace c10::cuda
+
 #endif
 
 namespace graphbolt {

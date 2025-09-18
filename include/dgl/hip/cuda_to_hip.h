@@ -71,6 +71,7 @@ using cudaStream_t = hipStream_t;
 #define CUresult hipError_t
 
 #define __nv_bfloat16 __hip_bfloat16
+#define nv_bfloat16 hip_bfloat16
 #define __nv_fp8_e4m3 __hip_fp8_e4m3
 #define __nv_fp8_e5m2 __hip_fp8_e5m2
 #define __float2bfloat16_rn __float2bfloat16
@@ -216,5 +217,11 @@ using cudaStream_t = hipStream_t;
 #define cusparseXcsrgemm2Nnz hipsparseXcsrgemm2Nnz
 #define cusparseXcsrsort hipsparseXcsrsort
 #define cusparseXcsrsort_bufferSizeExt hipsparseXcsrsort_bufferSizeExt
+
+// Used in graphbolt
+#define CUDACachingAllocator HIPCachingAllocator
+#define getCurrentCUDAStream getCurrentHIPStream
+#define C10_CUDA_CHECK C10_HIP_CHECK
+#define C10_CUDA_KERNEL_LAUNCH_CHECK C10_HIP_KERNEL_LAUNCH_CHECK
 
 #endif

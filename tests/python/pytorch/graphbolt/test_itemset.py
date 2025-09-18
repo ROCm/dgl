@@ -3,13 +3,10 @@ import re
 import backend as F
 
 import dgl
+
+import dgl.graphbolt as gb
 import pytest
 import torch
-
-if not F.is_hip():
-    import dgl.graphbolt as gb
-else:
-    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
 
 
 def test_ItemSet_names():
@@ -541,12 +538,7 @@ def test_HeteroItemSet_iteration_node_pairs_labels_indexes():
 def test_ItemSet_repr():
     # ItemSet with single name.
     item_set = gb.ItemSet(torch.arange(0, 5), names="seeds")
-    expected_str = (
-        "ItemSet(\n"
-        "    items=(tensor([0, 1, 2, 3, 4]),),\n"
-        "    names=('seeds',),\n"
-        ")"
-    )
+    expected_str = "ItemSet(\n    items=(tensor([0, 1, 2, 3, 4]),),\n    names=('seeds',),\n)"
 
     assert str(item_set) == expected_str, item_set
 

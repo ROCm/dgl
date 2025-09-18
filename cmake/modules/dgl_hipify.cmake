@@ -3,7 +3,7 @@
 
 # cmake file to trigger hipify
 
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
 function(hipify)
   set(flags)

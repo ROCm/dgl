@@ -15,7 +15,8 @@
  */
 #pragma once
 
-#if defined(__HIPCC__)
+#ifdef DGL_USE_HIP
+#include <hip/hip_runtime.h>
 #include <hip/hip_fp16.h>
 #include <hip/hip_fp8.h>
 #include <hip/hip_runtime_api.h>
@@ -25,6 +26,8 @@
 #include <cuda_fp8.h>
 #include <cuda_runtime_api.h>
 #endif
+
+
 
 #include <stdexcept>
 #include <string>
@@ -50,9 +53,8 @@ class CudaException : public std::runtime_error {
 
 inline void cuda_check_(cudaError_t val, const char* file, int line) {
   if (val != cudaSuccess) {
-    throw CudaException(
-        std::string(file) + ":" + std::to_string(line) + ": CUDA error " +
-        std::to_string(val) + ": " + cudaGetErrorString(val));
+    throw CudaException(std::string(file) + ":" + std::to_string(line) + ": CUDA error " +
+                        std::to_string(val) + ": " + cudaGetErrorString(val));
   }
 }
 
@@ -64,8 +66,7 @@ class CudaDeviceRestorer {
     if (device != dev_) {
       throw std::runtime_error(
           std::string(__FILE__) + ":" + std::to_string(__LINE__) +
-          ": Runtime Error: The device id in the context is not consistent "
-          "with configuration");
+          ": Runtime Error: The device id in the context is not consistent with configuration");
     }
   }
 
@@ -78,14 +79,10 @@ inline int get_dev(const void* ptr) {
   CUDA_CHECK(cudaPointerGetAttributes(&attr, ptr));
   int dev = -1;
 
-#if DGL_USE_HIP
-  if (attr.type == cudaMemoryTypeDevice)
-#else
-#if CUDART_VERSION >= 10000
+#if not defined(CUDART_VERSION) || CUDART_VERSION >= 10000
   if (attr.type == cudaMemoryTypeDevice)
 #else
   if (attr.memoryType == cudaMemoryTypeDevice)
-#endif
 #endif
   {
     dev = attr.device;

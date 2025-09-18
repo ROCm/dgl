@@ -20,8 +20,9 @@
 #include <thrust/for_each.h>
 #include <thrust/iterator/counting_iterator.h>
 
-#ifdef __HIPCC__
+#ifdef GRAPHBOLT_USE_HIP
 #include <hipcub/hipcub.hpp>
+namespace cub = hipcub;
 #else
 #include <cub/cub.cuh>
 #endif

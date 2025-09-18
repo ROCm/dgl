@@ -1,3 +1,51 @@
+# DGL with ROCm Support
+
+This version of DGL is built with ROCm support and offers several options to use the library:
+1. Install with pypi (not available yet)
+2. Use prebuilt docker image
+3. Build from source
+
+For a complete list of versions available through docker, please see the ROCm docs [here](https://rocm.docs.amd.com/en/latest/compatibility/ml-compatibility/dgl-compatibility.html).
+
+## 1. Install with pypi (not available yet)
+
+
+## 2. Use prebuilt docker image
+```bash
+# pull the docker image (change the tag to the one you want)
+docker pull rocm/dgl:<TAG>
+docker run \
+  -it \
+  --cap-add=SYS_PTRACE \
+  --security-opt seccomp=unconfined \
+   --device=/dev/kfd \
+   --device=/dev/dri \
+   --group-add video \
+   --ipc=host \
+   --shm-size 8G \
+   rocm/dgl:<TAG>
+```
+
+## 3. Build from source
+
+```bash
+# get the code
+git clone --recurse-submodules https://github.com/ROCm/dgl
+cd dgl
+
+# install graphbolt dependencies
+mkdir -p deps && cd deps && bash ../install_graphbolt_deps.sh
+
+# build dgl
+cmake --preset rocm <OPTIONAL_CMAKE_ARGS>
+cmake --build build
+
+# install the python bindings (should be done inside a virtual env)
+cd python
+python setup-amd.py bdist_wheel build_ext --inplace
+pip install dist/*.whl
+```
+
 <p align="center">
   <img src="http://data.dgl.ai/asset/logo.jpg" height="200">
 </p>

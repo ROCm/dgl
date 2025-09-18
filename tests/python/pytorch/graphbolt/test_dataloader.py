@@ -6,17 +6,13 @@ import backend as F
 
 import dgl
 
+import dgl.graphbolt
+import dgl.graphbolt as gb
+
 import pytest
 import torch
 import torch.distributed as thd
-
-if not F.is_hip():
-    import dgl.graphbolt
-    import dgl.graphbolt as gb
-    from dgl.graphbolt.datapipes import find_dps, traverse_dps
-else:
-    pytest.skip("Graphbolt unsupported in ROCm DGL", allow_module_level=True)
-
+from dgl.graphbolt.datapipes import find_dps, traverse_dps
 
 from . import gb_test_utils
 
@@ -86,6 +82,8 @@ def test_gpu_sampling_DataLoader(
     num_gpu_cached_edges,
     gpu_cache_threshold,
 ):
+    if cooperative and F.is_hip():
+        pytest.skip("Cooperative fetching is not supported on ROCm.")
     if cooperative and not thd.is_initialized():
         # On Windows, the init method can only be file.
         init_method = (
