@@ -110,9 +110,6 @@ elseif(USE_HIP)
     ${BOLT_DIR}/cuda/*.cc  
   )
   list(APPEND BOLT_SRC ${BOLT_CUDA_SRC})
-  #if(DEFINED ENV{ROCMARCHS})
-  #  set(CMAKE_HIP_ARCHITECTURES $ENV{ROCMARCHS})
-  #endif()
   set(LIB_GRAPHBOLT_CUDA_NAME "${LIB_GRAPHBOLT_NAME}_hip")
   set_source_files_properties(${BOLT_SRC} PROPERTIES LANGUAGE HIP)
   set_source_files_properties(${BOLT_CUDA_SRC} PROPERTIES LANGUAGE HIP)
@@ -120,10 +117,6 @@ endif()
 
 # The core graphbolt library.
 add_library(${LIB_GRAPHBOLT_NAME} SHARED ${BOLT_SRC} ${BOLT_HEADERS})
-
-# if (USE_HIP)
-#   set_property(TARGET ${LIB_GRAPHBOLT_NAME} PROPERTY HIP_ARCHITECTURES ${ROCMARCHS})
-# endif()
 
 # Setup includes
 
@@ -209,7 +202,6 @@ if(USE_CUDA OR USE_HIP)
   elseif(USE_HIP)
   set_source_files_properties(${BOLT_CUDA_EXTENSION_SRC} PROPERTIES LANGUAGE HIP)
   set_target_properties(${LIB_GRAPHBOLT_CUDA_NAME} PROPERTIES HIP_STANDARD 17)
-  # set_target_properties(${LIB_GRAPHBOLT_CUDA_NAME} PROPERTIES HIP_ARCHITECTURES "${ROCMARCHS}") # TODO RM
   set_target_properties(${LIB_GRAPHBOLT_CUDA_NAME} PROPERTIES LINKER_LANGUAGE HIP)
   endif()
 
