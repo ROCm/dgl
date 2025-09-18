@@ -6,7 +6,9 @@ export AMDGPU_TARGETS="gfx942"
 export CMAKE_HIP_ARCHITECTURES="gfx942"
 
 # set the install prefix to the cwd/install
-INSTALL_PREFIX=$(pwd)/install
+# INSTALL_PREFIX=$(pwd)/install
+INSTALL_PREFIX=/opt/rocm
+FILE_SOURCE_DIR=$(dirname $(realpath $0))
 
 # install 
 # Not installed by default
@@ -36,19 +38,7 @@ cmake -B build -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS
 cmake --build build --target install --verbose
 cd ../
 
-# # Need to patch for https://github.com/ROCm/rocm-libraries/issues/94. Fixed in https://github.com/ROCm/rocm-libraries/commit/2539bb2e1cd17d287f532a65125b662bf0b658dc
-# git clone https://github.com/tpopp/hipCUB.git
-# cd hipCUB
-# git checkout f342111197dd020f1c4210b16aa550b08992e97b
-# cmake -B build -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" \
-#         -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} 
-# cmake --build build --target install
-# cd ../
-
-# git clone https://github.com/ROCm/rocPRIM.git
-# cd rocPRIM
-# git checkout release/rocm-rel-6.4
-# cmake -B build -DGPU_TARGETS="${GPU_TARGETS}" -DAMDGPU_TARGETS="${AMDGPU_TARGETS}" -DCMAKE_HIP_ARCHITECTURES="${CMAKE_HIP_ARCHITECTURES}" \
-#         -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} 
-# cmake --build build --target install
-# cd ../
+# TODO remove this once the patches are merged
+# Right now we need to patch the rocPRIM headers to fix the build because these
+# config headers are missing gfx942 (I've added them manually)
+cp ${FILE_SOURCE_DIR}/*.hpp ${INSTALL_PREFIX}/include/rocprim/device/detail/config/.
