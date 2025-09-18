@@ -59,7 +59,7 @@ def test_sparse_adam_uva(use_uva, emb_dim):
 
     num_embs = 10
     device = F.ctx()
-    dgl_emb = NodeEmbedding(num_embs, emb_dim, "test_uva{}".format(use_uva))
+    dgl_emb = NodeEmbedding(num_embs, emb_dim, "test_uva{}_emb_dim{}".format(use_uva, emb_dim))
     torch_emb = th.nn.Embedding(num_embs, emb_dim, sparse=True)
     th.manual_seed(0)
     th.nn.init.uniform_(torch_emb.weight, 0, 1.0)
