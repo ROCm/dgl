@@ -21,6 +21,11 @@
 #ifdef GRAPHBOLT_USE_HIP
 #include <dgl/hip/cuda_to_hip.h>
 #include <hiprand/hiprand_kernel.h>
+// TODO this is a bad way to do this, but for ROCM < 7.0 we have to use a hacky
+// hipCUB
+#if HIP_VERSION_MAJOR >= 7
+using namespace DeviceFor;
+#endif
 #else
 #include <curand_kernel.h>
 #endif
@@ -367,8 +372,12 @@ c10::intrusive_ptr<sampling::FusedSampledSubgraph> SampleNeighbors(
                       const auto sub_indptr_data =
                           homo_sub_indptr.data_ptr<index_t>();
                       CUB_CALL(
-                          DeviceFor::Bulk, *num_edges,
-                          [=] __device__(int64_t i) {
+#if HIP_VERSION_MAJOR >= 7
+                          DeviceFor::Bulk,
+#else
+                      Bulk,
+#endif
+                          *num_edges, [=] __device__(int64_t i) {
                             const auto row = coo_rows_ptr[i];
                             const auto seed_timestamp =
                                 seeds_timestamp_ptr[row];

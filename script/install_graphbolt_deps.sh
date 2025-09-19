@@ -37,10 +37,6 @@ cmake -B build \
 cmake --build build --target install
 cd ${DEPS_DIR}
 
-# TODO remove this once the patches are merged
-# Right now we need to patch the rocPRIM headers to fix the build because these
-# config headers are missing gfx942 (I've added them manually)
-cp ${FILE_SOURCE_DIR}/*.hpp ${INSTALL_PREFIX}/include/rocprim/device/detail/config/.
 
 # if ROCM < 7.0 we also need to install rocThrust
 ROCM_VERSION=$(/opt/rocm/bin/hipconfig --version)
@@ -57,6 +53,12 @@ if [ "$ROCM_VERSION" -lt "7" ]; then
                 -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX}
         cmake --build build --target install
         cd ${DEPS_DIR}
+else
+    echo "ROCm Major Version is 7.0 or higher, skipping hipCUB installation"
+    # TODO remove this once the patches are merged
+    # Right now we need to patch the rocPRIM headers to fix the build because these
+    # config headers are missing gfx942 (I've added them manually)
+    cp ${FILE_SOURCE_DIR}/*.hpp ${INSTALL_PREFIX}/include/rocprim/device/detail/config/.
 
 fi
 
