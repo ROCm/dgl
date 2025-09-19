@@ -1,12 +1,14 @@
 import backend as F
+
+import dgl.graphbolt as gb
 import pytest
 import torch
 
-import dgl.graphbolt as gb
-
 
 def test_unique_and_compact_hetero():
-    N1 = torch.tensor([0, 5, 2, 7, 12, 7, 9, 5, 6, 2, 3, 4, 1, 0, 9], device=F.ctx())
+    N1 = torch.tensor(
+        [0, 5, 2, 7, 12, 7, 9, 5, 6, 2, 3, 4, 1, 0, 9], device=F.ctx()
+    )
     N2 = torch.tensor([0, 3, 3, 5, 2, 7, 2, 8, 4, 9, 2, 3], device=F.ctx())
     N3 = torch.tensor([1, 2, 6, 6, 1, 8, 3, 6, 3, 2], device=F.ctx())
     expected_unique = {
@@ -15,7 +17,9 @@ def test_unique_and_compact_hetero():
         "n3": torch.tensor([1, 2, 6, 8, 3], device=F.ctx()),
     }
     if N1.is_cuda and torch.cuda.get_device_capability()[0] < 7:
-        expected_reverse_id = {k: v.sort()[1] for k, v in expected_unique.items()}
+        expected_reverse_id = {
+            k: v.sort()[1] for k, v in expected_unique.items()
+        }
         expected_unique = {k: v.sort()[0] for k, v in expected_unique.items()}
     else:
         expected_reverse_id = {
@@ -61,8 +65,12 @@ def test_unique_and_compact_hetero():
 
 
 def test_unique_and_compact_homo():
-    N = torch.tensor([0, 5, 2, 7, 12, 7, 9, 5, 6, 2, 3, 4, 1, 0, 9], device=F.ctx())
-    expected_unique_N = torch.tensor([0, 5, 2, 7, 12, 9, 6, 3, 4, 1], device=F.ctx())
+    N = torch.tensor(
+        [0, 5, 2, 7, 12, 7, 9, 5, 6, 2, 3, 4, 1, 0, 9], device=F.ctx()
+    )
+    expected_unique_N = torch.tensor(
+        [0, 5, 2, 7, 12, 9, 6, 3, 4, 1], device=F.ctx()
+    )
     if N.is_cuda and torch.cuda.get_device_capability()[0] < 7:
         expected_reverse_id_N = expected_unique_N.sort()[1]
         expected_unique_N = expected_unique_N.sort()[0]
@@ -243,7 +251,9 @@ def test_compact_csc_format_homo():
     expected_indptr = indptr
     expected_indices = torch.arange(0, len(indices)) + 5
 
-    original_row_ids, compacted_csc_formats = gb.compact_csc_format(csc_formats, seeds)
+    original_row_ids, compacted_csc_formats = gb.compact_csc_format(
+        csc_formats, seeds
+    )
 
     indptr = compacted_csc_formats.indptr
     indices = compacted_csc_formats.indices

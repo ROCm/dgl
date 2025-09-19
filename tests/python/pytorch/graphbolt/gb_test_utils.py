@@ -3,13 +3,13 @@ import os
 import backend as F
 
 import dgl
+
+import dgl.graphbolt as gb
 import numpy as np
 import pandas as pd
 import pytest
 import scipy.sparse as sp
 import torch
-
-import dgl.graphbolt as gb
 
 
 def rand_csc_graph(N, density, bidirection_edge=False):
@@ -69,7 +69,9 @@ def random_hetero_graph(num_nodes, num_edges, num_ntypes, num_etypes):
     edges = {}
     for step, etype in enumerate(etypes):
         src_ntype, _, dst_ntype = etype
-        num_e = num_edges // num_etypes + (0 if step != 0 else num_edges % num_etypes)
+        num_e = num_edges // num_etypes + (
+            0 if step != 0 else num_edges % num_etypes
+        )
         if ntypes[src_ntype] == 0 or ntypes[dst_ntype] == 0:
             continue
         src = torch.randint(0, ntypes[src_ntype], (num_e,))
@@ -94,7 +96,9 @@ def random_homo_graphbolt_graph(
     """Generate random graphbolt version homograph"""
     # Generate random edges.
     nodes = np.repeat(np.arange(num_nodes, dtype=np.int64), 5)
-    neighbors = np.random.randint(0, num_nodes, size=(num_edges), dtype=np.int64)
+    neighbors = np.random.randint(
+        0, num_nodes, size=(num_edges), dtype=np.int64
+    )
     edges = np.stack([nodes, neighbors], axis=1)
     os.makedirs(os.path.join(test_dir, "edges"), exist_ok=True)
     assert edge_fmt in [
@@ -235,7 +239,9 @@ def generate_raw_data_for_hetero_dataset(
         ], "Only numpy and csv are supported for edges."
         if edge_fmt == "csv":
             # Write into edges/edge.csv
-            edges = pd.DataFrame(np.stack([src, dst], axis=1), columns=["src", "dst"])
+            edges = pd.DataFrame(
+                np.stack([src, dst], axis=1), columns=["src", "dst"]
+            )
             edge_path = os.path.join("edges", f"{etype_str}.csv")
             edges.to_csv(
                 os.path.join(test_dir, edge_path),

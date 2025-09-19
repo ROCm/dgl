@@ -7,10 +7,10 @@ from functools import partial
 import backend as F
 
 import dgl
-import pytest
-import torch
 
 import dgl.graphbolt as gb
+import pytest
+import torch
 
 from . import gb_test_utils
 
@@ -110,8 +110,12 @@ def _assert_homo_values(
             assert torch.equal(
                 sampled_subgraph.sampled_csc.indices, compacted_indices[step]
             )
-            assert torch.equal(sampled_subgraph.sampled_csc.indptr, indptr[step])
-            assert torch.equal(sampled_subgraph.original_column_node_ids, seeds[step])
+            assert torch.equal(
+                sampled_subgraph.sampled_csc.indptr, indptr[step]
+            )
+            assert torch.equal(
+                sampled_subgraph.original_column_node_ids, seeds[step]
+            )
 
 
 def test_SubgraphSampler_invoke():
@@ -131,7 +135,9 @@ def test_SubgraphSampler_invoke():
 
 @pytest.mark.parametrize("labor", [False, True])
 def test_NeighborSampler_invoke(labor):
-    graph = gb_test_utils.rand_csc_graph(20, 0.15, bidirection_edge=True).to(F.ctx())
+    graph = gb_test_utils.rand_csc_graph(20, 0.15, bidirection_edge=True).to(
+        F.ctx()
+    )
     itemset = gb.ItemSet(torch.arange(10), names="seeds")
     item_sampler = gb.ItemSampler(itemset, batch_size=2).copy_to(F.ctx())
     num_layer = 2
@@ -152,7 +158,9 @@ def test_NeighborSampler_invoke(labor):
 
 @pytest.mark.parametrize("labor", [False, True])
 def test_NeighborSampler_fanouts(labor):
-    graph = gb_test_utils.rand_csc_graph(20, 0.15, bidirection_edge=True).to(F.ctx())
+    graph = gb_test_utils.rand_csc_graph(20, 0.15, bidirection_edge=True).to(
+        F.ctx()
+    )
     itemset = gb.ItemSet(torch.arange(10), names="seeds")
     item_sampler = gb.ItemSampler(itemset, batch_size=2).copy_to(F.ctx())
     num_layer = 2
@@ -184,7 +192,9 @@ def test_NeighborSampler_fanouts(labor):
     ],
 )
 def test_SubgraphSampler_Node(sampler_type):
-    graph = gb_test_utils.rand_csc_graph(20, 0.15, bidirection_edge=True).to(F.ctx())
+    graph = gb_test_utils.rand_csc_graph(20, 0.15, bidirection_edge=True).to(
+        F.ctx()
+    )
     items = torch.arange(10)
     names = "seeds"
     if _is_temporal(sampler_type):
@@ -213,7 +223,9 @@ def test_SubgraphSampler_Node(sampler_type):
     ],
 )
 def test_SubgraphSampler_Link(sampler_type):
-    graph = gb_test_utils.rand_csc_graph(20, 0.15, bidirection_edge=True).to(F.ctx())
+    graph = gb_test_utils.rand_csc_graph(20, 0.15, bidirection_edge=True).to(
+        F.ctx()
+    )
     items = torch.arange(20).reshape(-1, 2)
     names = "seeds"
     if _is_temporal(sampler_type):
@@ -247,7 +259,9 @@ def test_SubgraphSampler_Link(sampler_type):
     ],
 )
 def test_SubgraphSampler_Link_With_Negative(sampler_type):
-    graph = gb_test_utils.rand_csc_graph(20, 0.15, bidirection_edge=True).to(F.ctx())
+    graph = gb_test_utils.rand_csc_graph(20, 0.15, bidirection_edge=True).to(
+        F.ctx()
+    )
     items = torch.arange(20).reshape(-1, 2)
     names = "seeds"
     if _is_temporal(sampler_type):
@@ -278,7 +292,9 @@ def test_SubgraphSampler_Link_With_Negative(sampler_type):
     ],
 )
 def test_SubgraphSampler_HyperLink(sampler_type):
-    graph = gb_test_utils.rand_csc_graph(20, 0.15, bidirection_edge=True).to(F.ctx())
+    graph = gb_test_utils.rand_csc_graph(20, 0.15, bidirection_edge=True).to(
+        F.ctx()
+    )
     items = torch.arange(20).reshape(-1, 5)
     names = "seeds"
     if _is_temporal(sampler_type):
@@ -586,12 +602,16 @@ def test_SubgraphSampler_HyperLink_Hetero(sampler_type):
             if _is_temporal(sampler_type):
                 assert torch.equal(
                     compacted_seeds,
-                    torch.tensor([[0, 0, 2, 2, 4], [1, 1, 3, 3, 5]]).to(F.ctx()),
+                    torch.tensor([[0, 0, 2, 2, 4], [1, 1, 3, 3, 5]]).to(
+                        F.ctx()
+                    ),
                 )
             else:
                 assert torch.equal(
                     compacted_seeds,
-                    torch.tensor([[0, 0, 2, 1, 0], [1, 1, 2, 0, 1]]).to(F.ctx()),
+                    torch.tensor([[0, 0, 2, 1, 0], [1, 1, 2, 0, 1]]).to(
+                        F.ctx()
+                    ),
                 )
 
 
@@ -622,7 +642,9 @@ def test_SubgraphSampler_Random_Hetero_Graph(sampler_type, replace):
         type_per_edge,
         node_type_to_id,
         edge_type_to_id,
-    ) = gb_test_utils.random_hetero_graph(num_nodes, num_edges, num_ntypes, num_etypes)
+    ) = gb_test_utils.random_hetero_graph(
+        num_nodes, num_edges, num_ntypes, num_etypes
+    )
     node_attributes = {}
     edge_attributes = {
         "A1": torch.randn(num_edges),
@@ -708,7 +730,9 @@ def test_SubgraphSampler_Random_Hetero_Graph(sampler_type, replace):
     ],
 )
 def test_SubgraphSampler_without_deduplication_Homo_Node(sampler_type):
-    graph = dgl.graph(([5, 0, 1, 5, 6, 7, 2, 2, 4], [0, 1, 2, 2, 2, 2, 3, 4, 4]))
+    graph = dgl.graph(
+        ([5, 0, 1, 5, 6, 7, 2, 2, 4], [0, 1, 2, 2, 2, 2, 3, 4, 4])
+    )
     graph = gb.from_dglgraph(graph, True).to(F.ctx())
     seed_nodes = torch.LongTensor([0, 3, 4])
     items = seed_nodes
@@ -720,15 +744,17 @@ def test_SubgraphSampler_without_deduplication_Homo_Node(sampler_type):
             ).to(F.ctx())
         }
         graph.edge_attributes = {
-            "timestamp": torch.zeros(graph.indices.numel(), dtype=torch.int64).to(
-                F.ctx()
-            )
+            "timestamp": torch.zeros(
+                graph.indices.numel(), dtype=torch.int64
+            ).to(F.ctx())
         }
         items = (items, torch.randint(1, 10, (3,)))
         names = (names, "timestamp")
 
     itemset = gb.ItemSet(items, names=names)
-    item_sampler = gb.ItemSampler(itemset, batch_size=len(seed_nodes)).copy_to(F.ctx())
+    item_sampler = gb.ItemSampler(itemset, batch_size=len(seed_nodes)).copy_to(
+        F.ctx()
+    )
     num_layer = 2
     fanouts = [torch.LongTensor([2]) for _ in range(num_layer)]
 
@@ -755,12 +781,16 @@ def test_SubgraphSampler_without_deduplication_Homo_Node(sampler_type):
         warnings.simplefilter("ignore", category=UserWarning)
         for data in datapipe:
             for step, sampled_subgraph in enumerate(data.sampled_subgraphs):
-                assert len(sampled_subgraph.original_row_node_ids) == length[step]
+                assert (
+                    len(sampled_subgraph.original_row_node_ids) == length[step]
+                )
                 assert torch.equal(
                     sampled_subgraph.sampled_csc.indices,
                     compacted_indices[step],
                 )
-                assert torch.equal(sampled_subgraph.sampled_csc.indptr, indptr[step])
+                assert torch.equal(
+                    sampled_subgraph.sampled_csc.indptr, indptr[step]
+                )
                 assert torch.equal(
                     torch.sort(sampled_subgraph.original_column_node_ids)[0],
                     seeds[step],
@@ -867,7 +897,9 @@ def test_SubgraphSampler_unique_csc_format_Homo_Node_cpu(labor):
     seed_nodes = torch.LongTensor([0, 3, 4])
 
     itemset = gb.ItemSet(seed_nodes, names="seeds")
-    item_sampler = gb.ItemSampler(itemset, batch_size=len(seed_nodes)).copy_to(F.ctx())
+    item_sampler = gb.ItemSampler(itemset, batch_size=len(seed_nodes)).copy_to(
+        F.ctx()
+    )
     num_layer = 2
     fanouts = [torch.LongTensor([2]) for _ in range(num_layer)]
 
@@ -912,7 +944,9 @@ def test_SubgraphSampler_unique_csc_format_Homo_Node_gpu(labor):
     seed_nodes = torch.LongTensor([0, 3, 4])
 
     itemset = gb.ItemSet(seed_nodes, names="seeds")
-    item_sampler = gb.ItemSampler(itemset, batch_size=len(seed_nodes)).copy_to(F.ctx())
+    item_sampler = gb.ItemSampler(itemset, batch_size=len(seed_nodes)).copy_to(
+        F.ctx()
+    )
     num_layer = 2
     fanouts = [torch.LongTensor([-1]) for _ in range(num_layer)]
 
@@ -967,7 +1001,9 @@ def test_SubgraphSampler_unique_csc_format_Homo_Node_gpu(labor):
 @pytest.mark.parametrize("labor", [False, True])
 def test_SubgraphSampler_unique_csc_format_Hetero_Node(labor):
     graph = get_hetero_graph().to(F.ctx())
-    itemset = gb.HeteroItemSet({"n2": gb.ItemSet(torch.arange(2), names="seeds")})
+    itemset = gb.HeteroItemSet(
+        {"n2": gb.ItemSet(torch.arange(2), names="seeds")}
+    )
     item_sampler = gb.ItemSampler(itemset, batch_size=2).copy_to(F.ctx())
     num_layer = 2
     fanouts = [torch.LongTensor([2]) for _ in range(num_layer)]
@@ -1088,7 +1124,9 @@ def test_SubgraphSampler_Hetero_multifanout_per_layer(sampler_type):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=UserWarning)
         for minibatch in sampler_dp:
-            for step, sampled_subgraph in enumerate(minibatch.sampled_subgraphs):
+            for step, sampled_subgraph in enumerate(
+                minibatch.sampled_subgraphs
+            ):
                 assert (
                     len(sampled_subgraph.sampled_csc["n1:e1:n2"].indices)
                     == indices_len[step]["n1:e1:n2"]
@@ -1109,7 +1147,9 @@ def test_SubgraphSampler_Hetero_multifanout_per_layer(sampler_type):
     ],
 )
 def test_SubgraphSampler_without_deduplication_Homo_Link(sampler_type):
-    graph = dgl.graph(([5, 0, 1, 5, 6, 7, 2, 2, 4], [0, 1, 2, 2, 2, 2, 3, 4, 4]))
+    graph = dgl.graph(
+        ([5, 0, 1, 5, 6, 7, 2, 2, 4], [0, 1, 2, 2, 2, 2, 3, 4, 4])
+    )
     graph = gb.from_dglgraph(graph, True).to(F.ctx())
     seed_nodes = torch.LongTensor([[0, 1], [3, 5]])
     items = seed_nodes
@@ -1121,9 +1161,9 @@ def test_SubgraphSampler_without_deduplication_Homo_Link(sampler_type):
             ).to(F.ctx())
         }
         graph.edge_attributes = {
-            "timestamp": torch.zeros(graph.indices.numel(), dtype=torch.int64).to(
-                F.ctx()
-            )
+            "timestamp": torch.zeros(
+                graph.indices.numel(), dtype=torch.int64
+            ).to(F.ctx())
         }
         items = (items, torch.randint(1, 10, (2,)))
         names = (names, "timestamp")
@@ -1158,7 +1198,9 @@ def test_SubgraphSampler_without_deduplication_Homo_Link(sampler_type):
             assert torch.equal(
                 sampled_subgraph.sampled_csc.indices, compacted_indices[step]
             )
-            assert torch.equal(sampled_subgraph.sampled_csc.indptr, indptr[step])
+            assert torch.equal(
+                sampled_subgraph.sampled_csc.indptr, indptr[step]
+            )
             assert torch.equal(
                 torch.sort(sampled_subgraph.original_column_node_ids)[0],
                 seeds[step],
@@ -1185,9 +1227,9 @@ def test_SubgraphSampler_without_deduplication_Hetero_Link(sampler_type):
             ).to(F.ctx())
         }
         graph.edge_attributes = {
-            "timestamp": torch.zeros(graph.indices.numel(), dtype=torch.int64).to(
-                F.ctx()
-            )
+            "timestamp": torch.zeros(
+                graph.indices.numel(), dtype=torch.int64
+            ).to(F.ctx())
         }
         items = (items, torch.randint(1, 10, (1,)))
         names = (names, "timestamp")
@@ -1314,8 +1356,12 @@ def test_SubgraphSampler_unique_csc_format_Homo_Link_cpu(labor):
             assert torch.equal(
                 sampled_subgraph.sampled_csc.indices, compacted_indices[step]
             )
-            assert torch.equal(sampled_subgraph.sampled_csc.indptr, indptr[step])
-            assert torch.equal(sampled_subgraph.original_column_node_ids, seeds[step])
+            assert torch.equal(
+                sampled_subgraph.sampled_csc.indptr, indptr[step]
+            )
+            assert torch.equal(
+                sampled_subgraph.original_column_node_ids, seeds[step]
+            )
 
 
 @unittest.skipIf(
@@ -1386,8 +1432,12 @@ def test_SubgraphSampler_unique_csc_format_Homo_Link_gpu(labor):
             assert torch.equal(
                 sampled_subgraph.sampled_csc.indices, compacted_indices[step]
             )
-            assert torch.equal(sampled_subgraph.sampled_csc.indptr, indptr[step])
-            assert torch.equal(sampled_subgraph.original_column_node_ids, seeds[step])
+            assert torch.equal(
+                sampled_subgraph.sampled_csc.indptr, indptr[step]
+            )
+            assert torch.equal(
+                sampled_subgraph.original_column_node_ids, seeds[step]
+            )
 
 
 @pytest.mark.parametrize("labor", [False, True])
@@ -1453,11 +1503,15 @@ def test_SubgraphSampler_unique_csc_format_Hetero_Link(labor):
         for step, sampled_subgraph in enumerate(data.sampled_subgraphs):
             for ntype in ["n1", "n2"]:
                 assert torch.equal(
-                    torch.sort(sampled_subgraph.original_row_node_ids[ntype])[0],
+                    torch.sort(sampled_subgraph.original_row_node_ids[ntype])[
+                        0
+                    ],
                     original_row_node_ids[step][ntype].to(F.ctx()),
                 )
                 assert torch.equal(
-                    torch.sort(sampled_subgraph.original_column_node_ids[ntype])[0],
+                    torch.sort(
+                        sampled_subgraph.original_column_node_ids[ntype]
+                    )[0],
                     original_column_node_ids[step][ntype].to(F.ctx()),
                 )
             for etype in ["n1:e1:n2", "n2:e2:n1"]:
@@ -1481,7 +1535,9 @@ def test_SubgraphSampler_unique_csc_format_Hetero_Link(labor):
     ],
 )
 def test_SubgraphSampler_without_deduplication_Homo_HyperLink(sampler_type):
-    graph = dgl.graph(([5, 0, 1, 5, 6, 7, 2, 2, 4], [0, 1, 2, 2, 2, 2, 3, 4, 4]))
+    graph = dgl.graph(
+        ([5, 0, 1, 5, 6, 7, 2, 2, 4], [0, 1, 2, 2, 2, 2, 3, 4, 4])
+    )
     graph = gb.from_dglgraph(graph, True).to(F.ctx())
     items = torch.LongTensor([[0, 1, 4], [3, 5, 6]])
     names = "seeds"
@@ -1492,9 +1548,9 @@ def test_SubgraphSampler_without_deduplication_Homo_HyperLink(sampler_type):
             ).to(F.ctx())
         }
         graph.edge_attributes = {
-            "timestamp": torch.zeros(graph.indices.numel(), dtype=torch.int64).to(
-                F.ctx()
-            )
+            "timestamp": torch.zeros(
+                graph.indices.numel(), dtype=torch.int64
+            ).to(F.ctx())
         }
         items = (items, torch.randint(1, 10, (2,)))
         names = (names, "timestamp")
@@ -1529,7 +1585,9 @@ def test_SubgraphSampler_without_deduplication_Homo_HyperLink(sampler_type):
             assert torch.equal(
                 sampled_subgraph.sampled_csc.indices, compacted_indices[step]
             )
-            assert torch.equal(sampled_subgraph.sampled_csc.indptr, indptr[step])
+            assert torch.equal(
+                sampled_subgraph.sampled_csc.indptr, indptr[step]
+            )
             assert torch.equal(
                 torch.sort(sampled_subgraph.original_column_node_ids)[0],
                 seeds[step],
@@ -1556,9 +1614,9 @@ def test_SubgraphSampler_without_deduplication_Hetero_HyperLink(sampler_type):
             ).to(F.ctx())
         }
         graph.edge_attributes = {
-            "timestamp": torch.zeros(graph.indices.numel(), dtype=torch.int64).to(
-                F.ctx()
-            )
+            "timestamp": torch.zeros(
+                graph.indices.numel(), dtype=torch.int64
+            ).to(F.ctx())
         }
         items = (items, torch.randint(1, 10, (1,)))
         names = (names, "timestamp")
@@ -1685,8 +1743,12 @@ def test_SubgraphSampler_unique_csc_format_Homo_HyperLink_cpu(labor):
             assert torch.equal(
                 sampled_subgraph.sampled_csc.indices, compacted_indices[step]
             )
-            assert torch.equal(sampled_subgraph.sampled_csc.indptr, indptr[step])
-            assert torch.equal(sampled_subgraph.original_column_node_ids, seeds[step])
+            assert torch.equal(
+                sampled_subgraph.sampled_csc.indptr, indptr[step]
+            )
+            assert torch.equal(
+                sampled_subgraph.original_column_node_ids, seeds[step]
+            )
 
 
 @unittest.skipIf(
@@ -1757,8 +1819,12 @@ def test_SubgraphSampler_unique_csc_format_Homo_HyperLink_gpu(labor):
             assert torch.equal(
                 sampled_subgraph.sampled_csc.indices, compacted_indices[step]
             )
-            assert torch.equal(sampled_subgraph.sampled_csc.indptr, indptr[step])
-            assert torch.equal(sampled_subgraph.original_column_node_ids, seeds[step])
+            assert torch.equal(
+                sampled_subgraph.sampled_csc.indptr, indptr[step]
+            )
+            assert torch.equal(
+                sampled_subgraph.original_column_node_ids, seeds[step]
+            )
 
 
 @pytest.mark.parametrize("labor", [False, True])
@@ -1824,11 +1890,15 @@ def test_SubgraphSampler_unique_csc_format_Hetero_HyperLink(labor):
         for step, sampled_subgraph in enumerate(data.sampled_subgraphs):
             for ntype in ["n1", "n2"]:
                 assert torch.equal(
-                    torch.sort(sampled_subgraph.original_row_node_ids[ntype])[0],
+                    torch.sort(sampled_subgraph.original_row_node_ids[ntype])[
+                        0
+                    ],
                     original_row_node_ids[step][ntype].to(F.ctx()),
                 )
                 assert torch.equal(
-                    torch.sort(sampled_subgraph.original_column_node_ids[ntype])[0],
+                    torch.sort(
+                        sampled_subgraph.original_column_node_ids[ntype]
+                    )[0],
                     original_column_node_ids[step][ntype].to(F.ctx()),
                 )
             for etype in ["n1:e1:n2", "n2:e2:n1"]:

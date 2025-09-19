@@ -1,10 +1,11 @@
 import unittest
 
 import backend as F
+
+import dgl.graphbolt as gb
 import pytest
 import torch
 
-import dgl.graphbolt as gb
 from .. import gb_test_utils
 
 
@@ -113,7 +114,9 @@ def test_InSubgraphSampler_homo():
     seed_nodes = torch.LongTensor([0, 5, 3])
     item_set = gb.ItemSet(seed_nodes, names="seeds")
     batch_size = 1
-    item_sampler = gb.ItemSampler(item_set, batch_size=batch_size).copy_to(F.ctx())
+    item_sampler = gb.ItemSampler(item_set, batch_size=batch_size).copy_to(
+        F.ctx()
+    )
 
     in_subgraph_sampler = gb.InSubgraphSampler(item_sampler, graph)
 
@@ -195,7 +198,9 @@ def test_InSubgraphSampler_hetero():
         }
     )
     batch_size = 2
-    item_sampler = gb.ItemSampler(item_set, batch_size=batch_size).copy_to(F.ctx())
+    item_sampler = gb.ItemSampler(item_set, batch_size=batch_size).copy_to(
+        F.ctx()
+    )
 
     in_subgraph_sampler = gb.InSubgraphSampler(item_sampler, graph)
 
@@ -222,7 +227,9 @@ def test_InSubgraphSampler_hetero():
         assert torch.equal(
             pairs.indices, expected_sampled_csc[etype].indices.to(F.ctx())
         )
-        assert torch.equal(pairs.indptr, expected_sampled_csc[etype].indptr.to(F.ctx()))
+        assert torch.equal(
+            pairs.indptr, expected_sampled_csc[etype].indptr.to(F.ctx())
+        )
 
     mn = next(it)
     assert mn.seeds == {
@@ -247,7 +254,9 @@ def test_InSubgraphSampler_hetero():
         assert torch.equal(
             pairs.indices, expected_sampled_csc[etype].indices.to(F.ctx())
         )
-        assert torch.equal(pairs.indptr, expected_sampled_csc[etype].indptr.to(F.ctx()))
+        assert torch.equal(
+            pairs.indptr, expected_sampled_csc[etype].indptr.to(F.ctx())
+        )
 
     mn = next(it)
     assert torch.equal(mn.seeds["N1"], torch.LongTensor([2, 1]).to(F.ctx()))
@@ -274,4 +283,6 @@ def test_InSubgraphSampler_hetero():
         assert torch.equal(
             pairs.indices, expected_sampled_csc[etype].indices.to(F.ctx())
         )
-        assert torch.equal(pairs.indptr, expected_sampled_csc[etype].indptr.to(F.ctx()))
+        assert torch.equal(
+            pairs.indptr, expected_sampled_csc[etype].indptr.to(F.ctx())
+        )

@@ -6,14 +6,13 @@ import backend as F
 
 import dgl
 
+import dgl.graphbolt
+import dgl.graphbolt as gb
+
 import pytest
 import torch
 import torch.distributed as thd
-
-import dgl.graphbolt
-import dgl.graphbolt as gb
 from dgl.graphbolt.datapipes import find_dps, traverse_dps
-
 
 from . import gb_test_utils
 
@@ -63,7 +62,9 @@ def test_DataLoader(overlap_feature_fetch):
     F._default_context_str != "gpu",
     reason="This test requires the GPU.",
 )
-@pytest.mark.parametrize("sampler_name", ["NeighborSampler", "LayerNeighborSampler"])
+@pytest.mark.parametrize(
+    "sampler_name", ["NeighborSampler", "LayerNeighborSampler"]
+)
 @pytest.mark.parametrize("enable_feature_fetch", [True, False])
 @pytest.mark.parametrize("overlap_feature_fetch", [True, False])
 @pytest.mark.parametrize("overlap_graph_fetch", [True, False])
@@ -208,7 +209,9 @@ def test_gpu_sampling_DataLoader(
                 x = gb.CooperativeConvFunction.apply(subgraph, x)
                 x, edge_index, size = subgraph.to_pyg(x)
                 x = x[0]
-                one = torch.ones(edge_index.shape[1], dtype=x.dtype, device=x.device)
+                one = torch.ones(
+                    edge_index.shape[1], dtype=x.dtype, device=x.device
+                )
                 coo = torch.sparse_coo_tensor(
                     edge_index.flipud(), one, size=(size[1], size[0])
                 )

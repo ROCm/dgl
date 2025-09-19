@@ -4,12 +4,12 @@ import unittest
 
 import backend as F
 
+import dgl.graphbolt as gb
+
 import numpy as np
 import pydantic
 import pytest
 import torch
-
-import dgl.graphbolt as gb
 from dgl.graphbolt.impl.sampled_subgraph_impl import SampledSubgraphImpl
 
 

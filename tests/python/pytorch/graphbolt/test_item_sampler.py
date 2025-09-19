@@ -7,12 +7,12 @@ from sys import platform
 import backend as F
 
 import dgl
+
+import dgl.graphbolt as gb
 import pytest
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
-
-import dgl.graphbolt as gb
 
 
 def test_ItemSampler_minibatcher():
@@ -60,7 +60,9 @@ def test_ItemSampler_minibatcher():
     def minibatcher(batch, names):
         return gb.MiniBatch(seeds=batch)
 
-    item_sampler = gb.ItemSampler(item_set, batch_size=4, minibatcher=minibatcher)
+    item_sampler = gb.ItemSampler(
+        item_set, batch_size=4, minibatcher=minibatcher
+    )
     minibatch = next(iter(item_sampler))
     assert isinstance(minibatch, gb.MiniBatch)
     assert minibatch.seeds is not None
@@ -156,7 +158,9 @@ def test_ItemSet_seed_nodes_labels(batch_size, shuffle, drop_last):
     minibatch_ids = torch.cat(minibatch_ids)
     minibatch_labels = torch.cat(minibatch_labels)
     assert torch.all(minibatch_ids[:-1] <= minibatch_ids[1:]) is not shuffle
-    assert torch.all(minibatch_labels[:-1] <= minibatch_labels[1:]) is not shuffle
+    assert (
+        torch.all(minibatch_labels[:-1] <= minibatch_labels[1:]) is not shuffle
+    )
 
 
 @pytest.mark.parametrize("batch_size", [1, 4])
@@ -502,7 +506,9 @@ def test_HeteroItemSet_seed_nodes_labels(batch_size, shuffle, drop_last):
     minibatch_ids = torch.cat(minibatch_ids)
     minibatch_labels = torch.cat(minibatch_labels)
     assert torch.all(minibatch_ids[:-1] <= minibatch_ids[1:]) is not shuffle
-    assert torch.all(minibatch_labels[:-1] <= minibatch_labels[1:]) is not shuffle
+    assert (
+        torch.all(minibatch_labels[:-1] <= minibatch_labels[1:]) is not shuffle
+    )
 
 
 @pytest.mark.parametrize("batch_size", [1, 4])
@@ -625,7 +631,9 @@ def test_HeteroItemSet_node_pairs_labels(batch_size, shuffle, drop_last):
 @pytest.mark.parametrize("batch_size", [1, 4])
 @pytest.mark.parametrize("shuffle", [True, False])
 @pytest.mark.parametrize("drop_last", [True, False])
-def test_HeteroItemSet_node_pairs_labels_indexes(batch_size, shuffle, drop_last):
+def test_HeteroItemSet_node_pairs_labels_indexes(
+    batch_size, shuffle, drop_last
+):
     # Head, tail and negative tails.
     num_ids = 103
     total_ids = 6 * num_ids
@@ -634,7 +642,9 @@ def test_HeteroItemSet_node_pairs_labels_indexes(batch_size, shuffle, drop_last)
     node_pairs_follow = torch.arange(num_ids * 2, num_ids * 4).reshape(-1, 2)
     neg_dsts_like = torch.arange(num_ids * 4, num_ids * 4 + num_ids * num_negs)
     neg_node_pairs_like = (
-        torch.cat((node_pairs_like[:, 0].repeat_interleave(num_negs), neg_dsts_like))
+        torch.cat(
+            (node_pairs_like[:, 0].repeat_interleave(num_negs), neg_dsts_like)
+        )
         .view(2, -1)
         .T
     )
@@ -661,7 +671,9 @@ def test_HeteroItemSet_node_pairs_labels_indexes(batch_size, shuffle, drop_last)
         .view(2, -1)
         .T
     )
-    all_node_pairs_follow = torch.cat((node_pairs_follow, neg_node_pairs_follow))
+    all_node_pairs_follow = torch.cat(
+        (node_pairs_follow, neg_node_pairs_follow)
+    )
     labels_follow = torch.empty(num_ids * 3)
     labels_follow[:num_ids] = 1
     labels_follow[num_ids:] = 0
@@ -739,11 +751,14 @@ def test_HeteroItemSet_node_pairs_labels_indexes(batch_size, shuffle, drop_last)
         final_labels_etype = torch.cat(final_labels[etype])
         final_indexes_etype = torch.cat(final_indexes[etype])
         assert (
-            torch.all(final_labels_etype[:-1] >= final_labels_etype[1:]) is not shuffle
+            torch.all(final_labels_etype[:-1] >= final_labels_etype[1:])
+            is not shuffle
         )
         if not drop_last:
             assert final_labels_etype.sum() == num_ids
-            assert torch.equal(final_indexes_etype, indexes_follow) is not shuffle
+            assert (
+                torch.equal(final_indexes_etype, indexes_follow) is not shuffle
+            )
 
 
 @pytest.mark.parametrize("batch_size", [1, 4])
@@ -1016,7 +1031,9 @@ def test_RangeCalculation(params):
 @pytest.mark.parametrize("num_workers", [0, 2])
 @pytest.mark.parametrize("drop_last", [False, True])
 @pytest.mark.parametrize("drop_uneven_inputs", [False, True])
-def test_DistributedItemSampler(num_ids, num_workers, drop_last, drop_uneven_inputs):
+def test_DistributedItemSampler(
+    num_ids, num_workers, drop_last, drop_uneven_inputs
+):
     nprocs = 4
     batch_size = 4
     item_set = gb.ItemSet(torch.arange(0, num_ids), names="seeds")

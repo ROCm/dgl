@@ -1,8 +1,8 @@
 import backend as F
-import pytest
-import torch
 
 import dgl.graphbolt as gb
+import pytest
+import torch
 
 
 def test_basic_feature_store_homo():
@@ -73,7 +73,9 @@ def test_basic_feature_store_hetero():
     metadata = {"max_value": 3}
 
     features = {}
-    features[("node", "author", "a")] = gb.TorchBasedFeature(a, metadata=metadata)
+    features[("node", "author", "a")] = gb.TorchBasedFeature(
+        a, metadata=metadata
+    )
     features[("edge", "paper:cites", "b")] = gb.TorchBasedFeature(b)
 
     feature_store = gb.BasicFeatureStore(features)
@@ -112,7 +114,9 @@ def test_basic_feature_store_hetero():
 
     # Test __setitem__ and __contains__ of FeatureStore.
     assert ("node", "author", "c") not in feature_store
-    feature_store[("node", "author", "c")] = feature_store[("node", "author", "a")]
+    feature_store[("node", "author", "c")] = feature_store[
+        ("node", "author", "a")
+    ]
     assert ("node", "author", "c") in feature_store
 
     # Test get keys of the features.

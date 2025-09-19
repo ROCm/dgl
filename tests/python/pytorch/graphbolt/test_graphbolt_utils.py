@@ -1,8 +1,8 @@
 import backend as F
-import pytest
-import torch
 
 import dgl.graphbolt as gb
+import pytest
+import torch
 
 
 def test_find_reverse_edges_homo():

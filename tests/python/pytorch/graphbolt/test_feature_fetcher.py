@@ -2,20 +2,24 @@ import random
 from functools import partial
 
 import backend as F
+
+import dgl.graphbolt as gb
 import pytest
 import torch
 from torch.utils.data.datapipes.iter import Mapper
 
 from . import gb_test_utils
 
-import dgl.graphbolt as gb
-
 
 def test_FeatureFetcher_invoke():
     # Prepare graph and required datapipes.
     graph = gb_test_utils.rand_csc_graph(20, 0.15, bidirection_edge=True)
-    a = torch.tensor([[random.randint(0, 10)] for _ in range(graph.total_num_nodes)])
-    b = torch.tensor([[random.randint(0, 10)] for _ in range(graph.total_num_edges)])
+    a = torch.tensor(
+        [[random.randint(0, 10)] for _ in range(graph.total_num_nodes)]
+    )
+    b = torch.tensor(
+        [[random.randint(0, 10)] for _ in range(graph.total_num_edges)]
+    )
 
     features = {}
     keys = [("node", None, "a"), ("edge", None, "b")]
@@ -43,8 +47,12 @@ def test_FeatureFetcher_invoke():
 
 def test_FeatureFetcher_homo():
     graph = gb_test_utils.rand_csc_graph(20, 0.15, bidirection_edge=True)
-    a = torch.tensor([[random.randint(0, 10)] for _ in range(graph.total_num_nodes)])
-    b = torch.tensor([[random.randint(0, 10)] for _ in range(graph.total_num_edges)])
+    a = torch.tensor(
+        [[random.randint(0, 10)] for _ in range(graph.total_num_nodes)]
+    )
+    b = torch.tensor(
+        [[random.randint(0, 10)] for _ in range(graph.total_num_edges)]
+    )
 
     features = {}
     keys = [("node", None, "a"), ("edge", None, "b")]
@@ -68,8 +76,12 @@ def _func(fn, minibatch):
 
 def test_FeatureFetcher_with_edges_homo():
     graph = gb_test_utils.rand_csc_graph(20, 0.15, bidirection_edge=True)
-    a = torch.tensor([[random.randint(0, 10)] for _ in range(graph.total_num_nodes)])
-    b = torch.tensor([[random.randint(0, 10)] for _ in range(graph.total_num_edges)])
+    a = torch.tensor(
+        [[random.randint(0, 10)] for _ in range(graph.total_num_nodes)]
+    )
+    b = torch.tensor(
+        [[random.randint(0, 10)] for _ in range(graph.total_num_edges)]
+    )
 
     def add_node_and_edge_ids(minibatch):
         seeds = minibatch.seeds
@@ -84,7 +96,9 @@ def test_FeatureFetcher_with_edges_homo():
                     sampled_csc=sampled_csc,
                     original_column_node_ids=torch.arange(10),
                     original_row_node_ids=torch.arange(10),
-                    original_edge_ids=torch.randint(0, graph.total_num_edges, (10,)),
+                    original_edge_ids=torch.randint(
+                        0, graph.total_num_edges, (10,)
+                    ),
                 )
             )
         data = gb.MiniBatch(input_nodes=seeds, sampled_subgraphs=subgraphs)
