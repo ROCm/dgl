@@ -23,9 +23,6 @@
 #include <hiprand/hiprand_kernel.h>
 // TODO this is a bad way to do this, but for ROCM < 7.0 we have to use a hacky
 // hipCUB
-#if HIP_VERSION_MAJOR >= 7
-using namespace DeviceFor;
-#endif
 #else
 #include <curand_kernel.h>
 #endif
