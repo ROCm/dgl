@@ -19,8 +19,8 @@
  */
 #include <c10/core/ScalarType.h>
 #ifdef GRAPHBOLT_USE_HIP
-#include <hiprand/hiprand_kernel.h>
 #include <dgl/hip/cuda_to_hip.h>
+#include <hiprand/hiprand_kernel.h>
 #else
 #include <curand_kernel.h>
 #endif
@@ -42,10 +42,9 @@
 #endif
 
 // Atomics
-#if defined(GRAPHBOLT_USE_HIP) && \
-    __HIP_ARCH_HAS_GLOBAL_INT32_ATOMICS__ && \
-    __HIP_ARCH_HAS_SHARED_INT32_ATOMICS__ &&                       \
-    __HIP_ARCH_HAS_GLOBAL_INT64_ATOMICS__ &&                       \
+#if defined(GRAPHBOLT_USE_HIP) && __HIP_ARCH_HAS_GLOBAL_INT32_ATOMICS__ && \
+    __HIP_ARCH_HAS_SHARED_INT32_ATOMICS__ &&                               \
+    __HIP_ARCH_HAS_GLOBAL_INT64_ATOMICS__ &&                               \
     __HIP_ARCH_HAS_SHARED_INT64_ATOMICS__
 #define __ATOMICS__ 1
 #elif __CUDA_ARCH__ >= 700
@@ -368,7 +367,7 @@ c10::intrusive_ptr<sampling::FusedSampledSubgraph> SampleNeighbors(
                       const auto sub_indptr_data =
                           homo_sub_indptr.data_ptr<index_t>();
                       CUB_CALL(
-                          Bulk, *num_edges,
+                          DeviceFor::Bulk, *num_edges,
                           [=] __device__(int64_t i) {
                             const auto row = coo_rows_ptr[i];
                             const auto seed_timestamp =

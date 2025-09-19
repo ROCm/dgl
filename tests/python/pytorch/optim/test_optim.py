@@ -9,6 +9,7 @@ import torch.multiprocessing as mp
 from dgl.nn import NodeEmbedding
 from dgl.optim import SparseAdagrad, SparseAdam
 
+
 @unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")
 @pytest.mark.parametrize("emb_dim", [1, 4, 101, 1024])
@@ -48,6 +49,7 @@ def test_sparse_adam(emb_dim):
     # Pytorch sparseAdam maintains a global step
     # DGL sparseAdam use a per embedding step
 
+
 @unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")
 @pytest.mark.parametrize("use_uva", [False, True, None])
@@ -59,7 +61,9 @@ def test_sparse_adam_uva(use_uva, emb_dim):
 
     num_embs = 10
     device = F.ctx()
-    dgl_emb = NodeEmbedding(num_embs, emb_dim, "test_uva{}".format(use_uva))
+    dgl_emb = NodeEmbedding(
+        num_embs, emb_dim, "test_uva{}_emb_dim{}".format(use_uva, emb_dim)
+    )
     torch_emb = th.nn.Embedding(num_embs, emb_dim, sparse=True)
     th.manual_seed(0)
     th.nn.init.uniform_(torch_emb.weight, 0, 1.0)
@@ -280,9 +284,7 @@ def start_torch_adam_worker(
             lr=0.01,
         )
     else:
-        torch_adam = th.optim.SparseAdam(
-            list(torch_emb.module.parameters()), lr=0.01
-        )
+        torch_adam = th.optim.SparseAdam(list(torch_emb.module.parameters()), lr=0.01)
 
     th.manual_seed(rank)
     if zero_comm:
@@ -411,9 +413,7 @@ def test_multiprocess_sparse_adam(num_workers, backend, zero_comm):
 
 
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")
-@unittest.skipIf(
-    F.ctx().type == "cpu", reason="cuda tensor is not supported for cpu"
-)
+@unittest.skipIf(F.ctx().type == "cpu", reason="cuda tensor is not supported for cpu")
 @pytest.mark.parametrize("num_workers", [2, 4, 8])
 def test_multiprocess_sparse_adam_cuda_tensor(num_workers):
     if F.ctx().type == "cpu":
@@ -549,9 +549,7 @@ def test_multiprocess_sparse_adam_zero_step(num_workers, backend):
 
 
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")
-@unittest.skipIf(
-    F.ctx().type == "cpu", reason="cuda tensor is not supported for cpu"
-)
+@unittest.skipIf(F.ctx().type == "cpu", reason="cuda tensor is not supported for cpu")
 @pytest.mark.parametrize("num_workers", [2, 4, 8])
 def test_multiprocess_sparse_adam_zero_step_cuda_tensor(num_workers):
     if F.ctx().type == "cuda" and th.cuda.device_count() < num_workers:
@@ -643,6 +641,7 @@ def start_sparse_adam_state_dict_worker(
         F.allclose(i, j)
 
     th.distributed.barrier()
+
 
 @unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")

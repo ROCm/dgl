@@ -23,10 +23,10 @@
 
 #include <cstddef>
 #ifdef GRAPHBOLT_USE_HIP
-#include <hipcub/hipcub.hpp>
 #include <cuco/cuda_stream_ref.hpp>
-namespace cuda{
-    using stream_ref = cuco::cuda_stream_ref;
+#include <hipcub/hipcub.hpp>
+namespace cuda {
+using stream_ref = cuco::cuda_stream_ref;
 }
 #define C10_CUDA_KERNEL_LAUNCH_CHECK C10_HIP_KERNEL_LAUNCH_CHECK
 #else
@@ -349,7 +349,7 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> GpuGraphCache::Replace(
               const auto missing_edge_ids =
                   edge_id_offsets ? edge_tensors.back().data_ptr<indptr_t>()
                                   : nullptr;
-              CUB_CALL(Bulk, num_buffers, [=] __device__(int64_t i) {
+              CUB_CALL(DeviceFor::Bulk, num_buffers, [=] __device__(int64_t i) {
                 const auto tensor_idx = i / num_nodes;
                 const auto idx = i % num_nodes;
                 const auto pos = positions_ptr[idx];
@@ -503,10 +503,12 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> GpuGraphCache::Replace(
               }
               if (edge_id_offsets) {
                 // Append the edge ids as the last element of the output.
-                output_edge_tensors.push_back(ops::IndptrEdgeIdsImpl(
-                    output_indptr, output_indptr.scalar_type(),
-                    *edge_id_offsets,
-                    static_cast<int64_t>(static_cast<indptr_t>(output_size))));
+                output_edge_tensors.push_back(
+                    ops::IndptrEdgeIdsImpl(
+                        output_indptr, output_indptr.scalar_type(),
+                        *edge_id_offsets,
+                        static_cast<int64_t>(
+                            static_cast<indptr_t>(output_size))));
               }
 
               {
