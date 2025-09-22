@@ -33,7 +33,11 @@
 // for now we're hardcoding it. See
 // https://rocm.docs.amd.com/projects/HIP/en/latest/how-to/hip_cpp_language_extensions.html#warpsize
 #ifdef DGL_USE_HIP
-#define SLAB_SIZE 64
+  #if HIP_VERSION_MAJOR >= 7
+	#define SLAB_SIZE 64
+  #else
+	#define SLAB_SIZE warpSize
+  #endif
 #else
 #define SLAB_SIZE 32
 #endif

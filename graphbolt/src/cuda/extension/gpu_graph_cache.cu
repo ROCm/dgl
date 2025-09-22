@@ -23,10 +23,10 @@
 
 #include <cstddef>
 #ifdef GRAPHBOLT_USE_HIP
-#include <hipcub/hipcub.hpp>
 #include <cuco/cuda_stream_ref.hpp>
-namespace cuda{
-    using stream_ref = cuco::cuda_stream_ref;
+#include <hipcub/hipcub.hpp>
+namespace cuda {
+using stream_ref = cuco::cuda_stream_ref;
 }
 #define C10_CUDA_KERNEL_LAUNCH_CHECK C10_HIP_KERNEL_LAUNCH_CHECK
 #else
@@ -349,30 +349,37 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> GpuGraphCache::Replace(
               const auto missing_edge_ids =
                   edge_id_offsets ? edge_tensors.back().data_ptr<indptr_t>()
                                   : nullptr;
-              CUB_CALL(Bulk, num_buffers, [=] __device__(int64_t i) {
-                const auto tensor_idx = i / num_nodes;
-                const auto idx = i % num_nodes;
-                const auto pos = positions_ptr[idx];
-                const auto original_idx = indices_ptr[idx];
-                const auto [cache_ptr, missing_ptr, size, cum_size] =
-                    cache_missing_dtype_dev_ptr[tensor_idx];
-                const auto is_cached = pos >= 0;
-                const auto offset = is_cached ? cache_indptr[pos]
-                                              : missing_indptr[idx - num_hit];
-                const auto offset_end = is_cached
-                                            ? cache_indptr[pos + 1]
-                                            : missing_indptr[idx - num_hit + 1];
-                const auto out_idx = tensor_idx * num_nodes + original_idx;
+              CUB_CALL(
+#if HIP_VERSION_MAJOR >= 7
+                  DeviceFor::Bulk,
+#else
+                Bulk,
+#endif
+                  num_buffers, [=] __device__(int64_t i) {
+                    const auto tensor_idx = i / num_nodes;
+                    const auto idx = i % num_nodes;
+                    const auto pos = positions_ptr[idx];
+                    const auto original_idx = indices_ptr[idx];
+                    const auto [cache_ptr, missing_ptr, size, cum_size] =
+                        cache_missing_dtype_dev_ptr[tensor_idx];
+                    const auto is_cached = pos >= 0;
+                    const auto offset = is_cached
+                                            ? cache_indptr[pos]
+                                            : missing_indptr[idx - num_hit];
+                    const auto offset_end =
+                        is_cached ? cache_indptr[pos + 1]
+                                  : missing_indptr[idx - num_hit + 1];
+                    const auto out_idx = tensor_idx * num_nodes + original_idx;
 
-                input_ptr[out_idx] =
-                    (is_cached ? cache_ptr : missing_ptr) + offset * size;
-                input_size_ptr[out_idx] = size * (offset_end - offset);
-                if (edge_id_offsets_ptr && i < num_nodes) {
-                  const auto edge_id =
-                      is_cached ? cache_offset[pos] : missing_edge_ids[offset];
-                  edge_id_offsets_ptr[out_idx] = edge_id;
-                }
-              });
+                    input_ptr[out_idx] =
+                        (is_cached ? cache_ptr : missing_ptr) + offset * size;
+                    input_size_ptr[out_idx] = size * (offset_end - offset);
+                    if (edge_id_offsets_ptr && i < num_nodes) {
+                      const auto edge_id = is_cached ? cache_offset[pos]
+                                                     : missing_edge_ids[offset];
+                      edge_id_offsets_ptr[out_idx] = edge_id;
+                    }
+                  });
               auto output_indptr = torch::empty(
                   num_nodes + 1, seeds.options().dtype(indptr_.scalar_type()));
               auto output_indptr_ptr = output_indptr.data_ptr<indptr_t>();
@@ -503,10 +510,12 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> GpuGraphCache::Replace(
               }
               if (edge_id_offsets) {
                 // Append the edge ids as the last element of the output.
-                output_edge_tensors.push_back(ops::IndptrEdgeIdsImpl(
-                    output_indptr, output_indptr.scalar_type(),
-                    *edge_id_offsets,
-                    static_cast<int64_t>(static_cast<indptr_t>(output_size))));
+                output_edge_tensors.push_back(
+                    ops::IndptrEdgeIdsImpl(
+                        output_indptr, output_indptr.scalar_type(),
+                        *edge_id_offsets,
+                        static_cast<int64_t>(
+                            static_cast<indptr_t>(output_size))));
               }
 
               {
