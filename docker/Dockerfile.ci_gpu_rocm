@@ -2,26 +2,24 @@
 # Licensed under the Apache License Version 2.0"
 
 #############################################################################
-ARG BASE_IMAGE=rocm/pytorch:rocm6.4_ubuntu24.04_py3.12_pytorch_release_2.6.0
+ARG BASE_IMAGE=rocm/pytorch:rocm7.0_ubuntu24.04_py3.12_pytorch_release_2.6.0
 FROM ${BASE_IMAGE} AS dgl_build
 
-ARG ARG_CONDA_ENV=py_3.12
 ARG ARG_MAX_JOBS=24
 
-ENV CONDA_DEFAULT_ENV=${ARG_CONDA_ENV}
-ENV CONDA_PREFIX="/opt/conda/envs/${ARG_CONDA_ENV}"
-ENV PATH="${CONDA_PREFIX}/bin:$PATH"
+ENV VENV_PATH="/opt/venv"
+ENV PATH="${VENV_PATH}/bin:$PATH"
 ENV MAX_JOBS=${ARG_MAX_JOBS:-24}
 
 # Install basic tools
 RUN apt-get update \
-    && apt install -y clang-format-15 ninja-build tree
+    && apt install -y clang-format-15 ninja-build tree cmake
 
 # Use bash shell for all RUN commands
 SHELL ["/bin/bash", "--login", "-c"]
 
 # Initialize conda
-RUN conda init bash
+#RUN conda init bash
     
 # Copy Sources
 ENV DGL_SRC_DIR="/src/dgl"
@@ -47,27 +45,26 @@ RUN mkdir -p /tmp/deps && cd /tmp/deps && bash ${DGL_SRC_DIR}/script/install_gra
 
 # TODO: Need to move out build dependencies in setup.py / pyproject.toml
 # Install Python deps
-RUN conda run -n ${ARG_CONDA_ENV} python -m pip install numpy==1.26.4 protobuf==3.20.1 packaging==24.2 \
-                cpplint==1.3.0 black==25.1.0 ogb==1.3.6 \
+RUN $VENV_PATH/bin/pip install numpy==1.26.4 protobuf==3.20.1 packaging==24.2 \
+                cpplint==1.3.0 black==25.1.0 ogb==1.3.6 psutil pydantic pytest \
                 Cython==3.0.12 ufmt==2.8.0 torchmetrics==1.7.2 torch_geometric typing_extensions>=4.14.0 wheel
 
 # Configure and build DGL
 WORKDIR ${DGL_SRC_DIR}
-RUN cmake --preset rocm -DCMAKE_HIP_ARCHITECTURES=${ARG_GPU_BUILD_TARGETS} -DGPU_TARGETS=${ARG_GPU_BUILD_TARGETS}
-RUN cmake --build ${DGL_BUILD_DIR} --parallel ${MAX_JOBS}
+RUN cmake --preset rocm -DCMAKE_HIP_ARCHITECTURES=${ARG_GPU_BUILD_TARGETS} -DGPU_TARGETS=${ARG_GPU_BUILD_TARGETS}  -DPYTHON_EXECUTABLE=/opt/venv/bin/python -DPython3_ROOT_DIR=/opt/venv 
+RUN cmake --build ${DGL_BUILD_DIR} --parallel ${MAX_JOBS}  
 
 WORKDIR ${DGL_SRC_DIR}/python
-RUN conda run -n ${ARG_CONDA_ENV} python setup-amd.py install
-RUN conda run -n ${ARG_CONDA_ENV} python setup-amd.py bdist_wheel
-RUN conda run -n ${ARG_CONDA_ENV} python setup-amd.py build_ext --inplace
+RUN  /opt/venv/bin/python setup-amd.py install
+RUN  /opt/venv/bin/python setup-amd.py bdist_wheel
+RUN  /opt/venv/bin/python  setup-amd.py build_ext --inplace
 
 # Store the artifacts
 RUN mkdir -p ${DGL_ARTIFACTS_DIR}
 RUN cp dist/*.whl ${DGL_ARTIFACTS_DIR}
 
 # Setup for the user
-RUN echo "conda activate ${ARG_CONDA_ENV}" >> ~/.bashrc
-
+RUN echo "source /opt/venv/bin/activate" >> ~/.bashrc
 RUN cat <<EOT >> ~/.bashrc
 echo "
 Welcome to the DGL CI container!
