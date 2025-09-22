@@ -17,9 +17,6 @@ RUN apt-get update \
 
 # Use bash shell for all RUN commands
 SHELL ["/bin/bash", "--login", "-c"]
-
-# Initialize conda
-#RUN conda init bash
     
 # Copy Sources
 ENV DGL_SRC_DIR="/src/dgl"
