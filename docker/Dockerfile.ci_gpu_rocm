@@ -13,7 +13,12 @@ ENV MAX_JOBS=${ARG_MAX_JOBS:-24}
 
 # Install basic tools
 RUN apt-get update \
-    && apt install -y clang-format-15 ninja-build tree cmake
+    && apt install -y clang-format-15 ninja-build tree 
+
+#Updating to latest version of Cmake for Ubuntu 22.04
+RUN apt-get update && apt-get install -y wget build-essential \
+ && wget -qO- https://cmake.org/files/v3.28/cmake-3.28.3-linux-x86_64.tar.gz \
+ | tar --strip-components=1 -xz -C /usr/local
 
 # Use bash shell for all RUN commands
 SHELL ["/bin/bash", "--login", "-c"]
@@ -48,7 +53,7 @@ RUN $VENV_PATH/bin/pip install numpy==1.26.4 protobuf==3.20.1 packaging==24.2 \
 
 # Configure and build DGL
 WORKDIR ${DGL_SRC_DIR}
-RUN cmake --preset rocm -DCMAKE_HIP_ARCHITECTURES=${ARG_GPU_BUILD_TARGETS} -DGPU_TARGETS=${ARG_GPU_BUILD_TARGETS}  -DPYTHON_EXECUTABLE=/opt/venv/bin/python -DPython3_ROOT_DIR=/opt/venv 
+RUN cmake --preset rocm -DCMAKE_HIP_ARCHITECTURES=${ARG_GPU_BUILD_TARGETS} -DGPU_TARGETS=${ARG_GPU_BUILD_TARGETS}  
 RUN cmake --build ${DGL_BUILD_DIR} --parallel ${MAX_JOBS}  
 
 WORKDIR ${DGL_SRC_DIR}/python
@@ -62,7 +67,7 @@ RUN cp dist/*.whl ${DGL_ARTIFACTS_DIR}
 
 # Setup for the user
 RUN echo "source /opt/venv/bin/activate" >> ~/.bashrc
-RUN cat <<EOT >> ~/.bashrc
+RUN cat <<'EOT' >> ~/.bashrc
 echo "
 Welcome to the DGL CI container!
 
