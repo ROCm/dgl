@@ -11,6 +11,15 @@ from setuptools.dist import Distribution
 from setuptools.extension import Extension
 
 
+def found_amd_platform():
+    """Determine if the platform is AMD so we can tailor the setup."""
+
+    # TODO we need to come up with a robust way to do this
+    # for now we assume it is AMD. We'll have to fix this before merging
+    # with upstream.
+    return True
+
+
 class BinaryDistribution(Distribution):
     def has_ext_modules(self):
         return True
@@ -229,7 +238,7 @@ install_requires = [
     "scipy>=1.1.0",
     "tqdm",
     #
-    "numpy==1.26.4",
+    "numpy==1.26.4" if found_amd_platform() else "numpy>=1.14.0",
     "ufmt==2.8.0",
     "torchmetrics==1.7.2",
     "typing_extensions>=4.15",
@@ -245,8 +254,12 @@ setup_requires = [
     "Cython==3.0.12",
 ]
 
+package_name = "dgl" + os.getenv("DGL_PACKAGE_SUFFIX", "")
+if found_amd_platform():
+    package_name = "amd-" + package_name
+
 setup(
-    name="dgl" + os.getenv("DGL_PACKAGE_SUFFIX", ""),
+    name=package_name,
     version=VERSION,
     description="Deep Graph Library",
     zip_safe=False,
