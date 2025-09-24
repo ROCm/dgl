@@ -137,13 +137,9 @@ def config_cython():
                     language="c++",
                 )
             )
-        return cythonize(
-            ret, force=True, compiler_directives={"language_level": "3"}
-        )
+        return cythonize(ret, force=True, compiler_directives={"language_level": "3"})
     except ImportError:
-        print(
-            "WARNING: Cython is not installed, will compile without cython module"
-        )
+        print("WARNING: Cython is not installed, will compile without cython module")
         return []
 
 
@@ -221,15 +217,28 @@ if include_libs:
 # Configure dependencies.
 install_requires = [
     "networkx>=2.1",
-    "numpy>=1.14.0",
     "packaging",
-    "pandas",
     "psutil>=5.8.0",
     "pydantic>=2.0",
     "pyyaml",
     "requests>=2.19.0",
     "scipy>=1.1.0",
     "tqdm",
+    #
+    "numpy==1.26.4",
+    "ufmt==2.8.0",
+    "torchmetrics==1.7.2",
+    "typing_extensions>=4.15",
+    "torch_geometric",
+    "pytest",
+    "pandas",
+]
+
+setup_requires = [
+    "setuptools",
+    "wheel",
+    "build",
+    "Cython==3.0.12",
 ]
 
 setup(
@@ -241,6 +250,7 @@ setup(
     maintainer_email="wmjlyjemaine@gmail.com",
     packages=find_packages(),
     install_requires=install_requires,
+    setup_requires=setup_requires,
     url="https://github.com/dmlc/dgl",
     distclass=BinaryDistribution,
     ext_modules=config_cython(),
