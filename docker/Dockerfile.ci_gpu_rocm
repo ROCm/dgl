@@ -45,21 +45,19 @@ ENV DGL_ARTIFACTS_DIR="/tmp/artifacts"
 # Install GraphBolt dependencies
 RUN mkdir -p /tmp/deps && cd /tmp/deps && bash ${DGL_SRC_DIR}/script/install_graphbolt_deps.sh
 
-# TODO: Need to move out build dependencies in setup.py / pyproject.toml
-# Install Python deps
-RUN $VENV_PATH/bin/pip install numpy==1.26.4 protobuf==3.20.1 packaging==24.2 \
-                cpplint==1.3.0 black==25.1.0 ogb==1.3.6 psutil pydantic pytest \
-                Cython==3.0.12 ufmt==2.8.0 torchmetrics==1.7.2 torch_geometric typing_extensions>=4.14.0 wheel
-
 # Configure and build DGL
 WORKDIR ${DGL_SRC_DIR}
 RUN cmake --preset rocm -DCMAKE_HIP_ARCHITECTURES=${ARG_GPU_BUILD_TARGETS} -DGPU_TARGETS=${ARG_GPU_BUILD_TARGETS}  
 RUN cmake --build ${DGL_BUILD_DIR} --parallel ${MAX_JOBS}  
 
 WORKDIR ${DGL_SRC_DIR}/python
-RUN  /opt/venv/bin/python setup-amd.py install
-RUN  /opt/venv/bin/python setup-amd.py bdist_wheel
-RUN  /opt/venv/bin/python  setup-amd.py build_ext --inplace
+# Make sure we have wheel and build installed
+RUN ${VENV_PATH}/bin/python -m pip install build wheel
+# Install an editable version of the package so we can make source changes and test them
+RUN ${VENV_PATH}/bin/python -m pip install -e .
+# Build the wheel file for packaging (won't update automatically with source changes)
+RUN ${VENV_PATH}/bin/python -m build --wheel
+
 
 # Store the artifacts
 RUN mkdir -p ${DGL_ARTIFACTS_DIR}

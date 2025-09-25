@@ -28,13 +28,22 @@ docker run \
 
 ## 3. Build from source
 
+- ROCm >= 6.4 or later
+- CMake >= 3.28 and < 4.0
+- Ninja >= 1.11
+- Python >= 3.10
+- PyTorch >= 2.6.0
+
 ```bash
 # get the code
 git clone --recurse-submodules https://github.com/ROCm/dgl
 cd dgl
 
 # install graphbolt dependencies
-mkdir -p deps && cd deps && bash ../install_graphbolt_deps.sh
+mkdir -p deps
+cd deps
+bash ../script/install_graphbolt_deps.sh
+cd ..
 
 # build dgl
 cmake --preset rocm <OPTIONAL_CMAKE_ARGS>
@@ -42,8 +51,11 @@ cmake --build build
 
 # install the python bindings (should be done inside a virtual env)
 cd python
-python setup-amd.py bdist_wheel build_ext --inplace
-pip install dist/*.whl
+python -m pip install -e .
+python -m build --wheel
+
+# Check installation with python tests
+bash tests/scripts/task_unit_test_rocm.sh pytorch gpu
 ```
 
 <p align="center">
