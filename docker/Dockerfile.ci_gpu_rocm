@@ -40,7 +40,8 @@ ARG ARG_GPU_BUILD_TARGETS="gfx90a,gfx942"
 ENV GPU_BUILD_TARGETS=${ARG_GPU_BUILD_TARGETS}
 
 ENV DGL_BUILD_DIR="${DGL_SRC_DIR}/build"
-ENV DGL_ARTIFACTS_DIR="/tmp/artifacts"
+ARG ARG_DGL_ARTIFACTS_DIR="/artifacts"
+ENV DGL_ARTIFACTS_DIR="${ARG_DGL_ARTIFACTS_DIR}"
 
 # Install GraphBolt dependencies
 RUN mkdir -p /tmp/deps && cd /tmp/deps && bash ${DGL_SRC_DIR}/script/install_graphbolt_deps.sh
