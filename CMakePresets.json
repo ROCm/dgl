@@ -38,6 +38,18 @@
         "CMAKE_C_FLAGS": "-ftime-trace",
         "CMAKE_CXX_FLAGS": "-ftime-trace"
       }
+    },  
+    {
+      "name": "rocm-cov",
+      "description": "Build with ROCm and gcov for code coverage",
+      "inherits": ["rocm-llvm"],
+      "cacheVariables": {
+        "BUILD_TYPE": "Debug",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_FLAGS":   "-O0 -g3 -ggdb -fprofile-instr-generate -fcoverage-mapping -Wl,--allow-multiple-definition",
+        "CMAKE_CXX_FLAGS": "-O0 -g3 -ggdb -fprofile-instr-generate -fcoverage-mapping -Wl,--allow-multiple-definition",
+        "CMAKE_HIP_FLAGS": "-O0 -g3 -ggdb -fprofile-instr-generate -fcoverage-mapping -Wl,--allow-multiple-definition"
+      }
     }
   ]
 }
