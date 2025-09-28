@@ -41,7 +41,7 @@
     },  
     {
       "name": "rocm-cov",
-      "description": "Build with ROCm and gcov for code coverage",
+      "description": "Build with ROCm and llvm-cov for code coverage",
       "inherits": ["rocm-llvm"],
       "cacheVariables": {
         "BUILD_TYPE": "Debug",
