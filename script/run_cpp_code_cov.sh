@@ -57,8 +57,17 @@ find . -type f -name "*.profraw" > rawprofiles.list
 # Merge the profraw files
 llvm-profdata merge --sparse  --input-files=rawprofiles.list -o coverage.profdata
 
-# Generate the coverage report
-llvm-cov report ${BINARIES} -instr-profile=coverage.profdata --ignore-filename-regex="third_party*" | tee coverage_report.txt
+# Generate the coverage report for full codebase, non-cuda, and cuda-only
+llvm-cov report ${BINARIES} -instr-profile=coverage.profdata \
+  --ignore-filename-regex="third_party/"                  | tee full_coverage_report.txt
+llvm-cov report ${BINARIES} -instr-profile=coverage.profdata \
+  --ignore-filename-regex="third_party/|.*\.cu$|.*\.cuh$" | tee host_coverage_report.txt
+llvm-cov report ${BINARIES} -instr-profile=coverage.profdata \
+  --ignore-filename-regex="third_party/|.*\.cc$|.*\.h$"   | tee device_coverage_report.txt
+
+grep "TOTAL" *_coverage_report.txt
+
+# llvm-cov report ${BINARIES} -instr-profile=coverage.profdata --ignore-filename-regex="third_party*" | tee device_coverage_report.txt
 
 # llvm-cov show --instr-profile=coverage.profdata --ignore-filename-regex="third_party*" --format=html --output-dir=cov_report_llvmcov ${BINARIES} 
 
