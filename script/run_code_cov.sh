@@ -9,10 +9,12 @@ set -exuo pipefail
 # Assumptions:
 # - LLVM toolchain is installed and is in the path (see https://apt.llvm.org/ for download instructions)
 # - You've built DGL with coverage flags turned on using `cmake --preset rocm-cov`
-# - You're running this inside of the build directory (it keeps the dgl root dir clean)
+# - lcov is installed and is in the path
 
 # Output:
-# - coverage_report.txt
+# - cpp_coverage_report.txt
+# - lcov_output/ (directory with html coverage report)
+# - 
 
 # Notes:
 # - This coverage report omits third party libraries
@@ -32,11 +34,17 @@ if ! command -v llvm-profdata &> /dev/null; then
   echo "llvm-profdata could not be found in the path"
   exit 1
 fi
-
-# Add warning if the build directory is not the current directory
-if [ "$(pwd)" != "${DGL_DIR}/build" ]; then
-  echo "[WARNING] You're not in the build directory"
+if ! command -v lcov &> /dev/null; then
+  echo "lcov could not be found in the path"
+  exit 1
 fi
+
+################################################################################
+# Run the python tests
+################################################################################
+
+bash ${DGL_DIR}/tests/scripts/task_unit_test_rocm.sh pytorch gpu on
+# generates lcov_pytest.info trace
 
 ################################################################################
 # Run tests
@@ -45,7 +53,7 @@ fi
 ${DGL_DIR}/build/runUnitTests
 
 ################################################################################
-# Generate coverage report
+# Generate C++ coverage report
 ################################################################################
 
 # TODO do we want to collect graphbolt coverage here if we are skipping other third party libraries?
@@ -58,23 +66,31 @@ find . -type f -name "*.profraw" > rawprofiles.list
 llvm-profdata merge --sparse  --input-files=rawprofiles.list -o coverage.profdata
 
 # Generate the coverage report for full codebase, non-cuda, and cuda-only
-llvm-cov report ${BINARIES} -instr-profile=coverage.profdata \
-  --ignore-filename-regex="third_party/"                  | tee full_coverage_report.txt
-llvm-cov report ${BINARIES} -instr-profile=coverage.profdata \
-  --ignore-filename-regex="third_party/|.*\.cu$|.*\.cuh$" | tee host_coverage_report.txt
-llvm-cov report ${BINARIES} -instr-profile=coverage.profdata \
-  --ignore-filename-regex="third_party/|.*\.cc$|.*\.h$"   | tee device_coverage_report.txt
+llvm-cov report ${BINARIES} \
+  -instr-profile=coverage.profdata \
+  --ignore-filename-regex="third_party/" | tee cpp_coverage_report.txt
 
-grep "TOTAL" *_coverage_report.txt
+# Convert to lcov format
+llvm-cov export ${BINARIES} -instr-profile=coverage.profdata -format=lcov > lcov_cpp.info
 
-# llvm-cov report ${BINARIES} -instr-profile=coverage.profdata --ignore-filename-regex="third_party*" | tee device_coverage_report.txt
+################################################################################
+# Generate the full DGL coverage report
+################################################################################
 
-# llvm-cov show --instr-profile=coverage.profdata --ignore-filename-regex="third_party*" --format=html --output-dir=cov_report_llvmcov ${BINARIES} 
+# Merge the lcov files
+lcov --ignore-errors inconsistent --ignore-errors corrupt \
+  --add-tracefile lcov_cpp.info -a lcov_pytest.info -o lcov_merged.info
+# Remove third party libraries
+lcov --ignore-errors inconsistent \
+  --remove lcov_merged.info '*/third_party/*' -o lcov_merged.info
 
-# TODO this isn't working quite right yet
-# llvm-cov show ${BINARIES} \
-#   -instr-profile=coverage.profdata \
-#   -show-line-counts-or-regions \
-#   -format=html \
-#   -output-dir=coverage_report
-  
+# Generate the coverage report
+genhtml --ignore-errors inconsistent -j lcov_merged.info -o lcov_output
+
+# Logging the import artifacts
+echo "HTML coverage report generated in lcov_output/index.html"
+echo "C++ coverage report generated in cpp_coverage_report.txt"
+echo "C++ lcov file generated in lcov_cpp.info"
+echo "Python coverage report generated in python_coverage_report.txt"
+echo "Python lcov file generated in lcov_pytest.info"
+echo "Full DGL lcov file generated in lcov_merged.info"
