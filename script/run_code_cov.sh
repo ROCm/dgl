@@ -57,7 +57,7 @@ ${DGL_DIR}/build/runUnitTests
 ################################################################################
 
 # TODO do we want to collect graphbolt coverage here if we are skipping other third party libraries?
-BINARIES="${DGL_DIR}/build/libdgl.so ${DGL_DIR}/build/graphbolt/libgraphbolt_pytorch_2.6.0.so"
+BINARIES="${DGL_DIR}/build/libdgl.so"
 
 # Collect all the profraw files
 find . -type f -name "*.profraw" > rawprofiles.list
