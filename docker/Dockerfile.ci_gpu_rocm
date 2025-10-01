@@ -5,10 +5,10 @@
 ARG BASE_IMAGE=rocm/pytorch:rocm7.0_ubuntu24.04_py3.12_pytorch_release_2.6.0
 FROM ${BASE_IMAGE} AS dgl_build
 
-ARG ARG_MAX_JOBS=24
+# NOTE: This dockerfile **assumes** that BASE_IMAGE comes with the appropriate
+# python executable in the path.
 
-ENV VENV_PATH="/opt/venv"
-ENV PATH="${VENV_PATH}/bin:$PATH"
+ARG ARG_MAX_JOBS=24
 ENV MAX_JOBS=${ARG_MAX_JOBS:-24}
 
 # Install basic tools
@@ -53,11 +53,11 @@ RUN cmake --build ${DGL_BUILD_DIR} --parallel ${MAX_JOBS}
 
 WORKDIR ${DGL_SRC_DIR}/python
 # Make sure we have wheel and build installed
-RUN ${VENV_PATH}/bin/python -m pip install build wheel
+RUN python -m pip install build wheel
 # Install an editable version of the package so we can make source changes and test them
-RUN ${VENV_PATH}/bin/python -m pip install -e .
+RUN python -m pip install -e .
 # Build the wheel file for packaging (won't update automatically with source changes)
-RUN ${VENV_PATH}/bin/python -m build --wheel
+RUN python -m build --wheel
 
 
 # Store the artifacts
@@ -65,7 +65,6 @@ RUN mkdir -p ${DGL_ARTIFACTS_DIR}
 RUN cp dist/*.whl ${DGL_ARTIFACTS_DIR}
 
 # Setup for the user
-RUN echo "source /opt/venv/bin/activate" >> ~/.bashrc
 RUN cat <<'EOT' >> ~/.bashrc
 echo "
 Welcome to the DGL CI container!
