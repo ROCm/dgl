@@ -20,18 +20,22 @@ RUN apt-get update \
     && apt install -y clang-format-15
 
 # Use bash shell for all RUN commands
-SHELL ["/bin/bash", "-c"]
+SHELL ["/bin/bash", "--login", "-c"]
 
-RUN conda init \
-    && eval "$(conda shell.bash hook)" \
-    && conda activate ${ARG_CONDA_ENV} \
-    && pip install --upgrade pip \
+RUN python -m pip install --upgrade pip \
     && echo "Python version: $(python --version)" \
     && echo "Python executable: $(which python)" \
     && echo "Pip version: $(pip --version)" \
     && echo "Pip executable: $(which pip)" \
     && pip install wheel
-    
+
+# Clean up remnants of any previous builds
+RUN rm -rf ${DGL_SRC_DIR}/build
+RUN rm -rf ${DGL_SRC_DIR}/graphbolt/build
+RUN rm -rf ${DGL_SRC_DIR}/dgl_sparse/build
+RUN rm -rf ${DGL_SRC_DIR}/tensoradapter/pytorch/build
+RUN rm -rf ${DGL_SRC_DIR}/python/build ${DGL_SRC_DIR}/python/dist ${DGL_SRC_DIR}/python/*.egg-info ${DGL_SRC_DIR}/python/libdgl.so
+
 # Copy Sources
 ENV DGL_SRC_DIR="/src/dgl"
 RUN mkdir -p ${DGL_SRC_DIR}
@@ -48,7 +52,7 @@ ARG ARG_GPU_BUILD_TARGETS="gfx90a,gfx942"
 ENV GPU_BUILD_TARGETS=${ARG_GPU_BUILD_TARGETS}
 
 ENV DGL_BUILD_DIR="${DGL_SRC_DIR}/build"
-ENV DGL_BUILD_TYPE="dev"
+ENV DGL_BUILD_TYPE="Release"
 ENV DGL_ARTIFACTS_DIR="/tmp/artifacts"
 
 # TODO: Need to move out build dependencies in setup.py / pyproject.toml
@@ -65,14 +69,16 @@ RUN echo "DGL_SRC_DIR: ${DGL_SRC_DIR}" \
     && echo "Python executable: $(which python)" \
     && echo "Pip version: $(pip --version)" \
     && echo "Pip executable: $(which pip)" \
-    && pip install numpy==1.26.4 protobuf==3.20.1 packaging==24.2 \
+    && python -m pip install numpy==1.26.4 protobuf==3.20.1 packaging==24.2 \
                 cpplint==1.3.0 black==25.1.0 ogb==1.3.6 \
-                Cython==3.0.12 ufmt==2.8.0 torchmetrics==1.7.2 \
+                Cython==3.0.12 ufmt==2.8.0 torchmetrics==1.7.2 "typing-extensions>=4.15.0" torch_geometric \
+                pytest pandas \
     && echo "Installing DGL build dependencies..." \
     && echo "Building DGL with ROCm support..." \
     && mkdir -p ${DGL_BUILD_DIR} && cd ${DGL_BUILD_DIR} \
     && cmake \
        -DBUILD_TYPE=${DGL_BUILD_TYPE} \
+       -DCMAKE_BUILD_TYPE=${DGL_BUILD_TYPE} \
        -DUSE_HIP=ON \
        -DGPU_TARGETS=${GPU_BUILD_TARGETS} \
        -DROCM_TARGET_ARCH=${GPU_BUILD_TARGETS} \
@@ -82,40 +88,31 @@ RUN echo "DGL_SRC_DIR: ${DGL_SRC_DIR}" \
     && make -j ${MAX_JOBS}
 
 RUN cd ${DGL_SRC_DIR}/python \
-    && python setup-amd.py bdist_wheel build_ext --inplace \
+    && python setup-amd.py bdist_wheel \
+    && python setup-amd.py install \
+    && python setup-amd.py build_ext --inplace \
     && mkdir -p ${DGL_ARTIFACTS_DIR} \
     && cp dist/*.whl ${DGL_ARTIFACTS_DIR}
 
-#############################################################################
-# Stage 2: Prepare final image with AMD SMI, and DGL
-FROM scratch AS dgl_export
-COPY --from=dgl_build /tmp/artifacts/*.whl /
+RUN conda init && eval "$(conda shell.bash hook)" 
+RUN echo "conda activate ${ARG_CONDA_ENV}" >> ~/.bashrc
+RUN cat <<'EOT' >> ~/.bashrc
+echo "
+Welcome to the DGL CI container!
 
-#############################################################################
-# Stage 3: Prepare final image with AMD SMI, and DGL
-FROM ${BASE_IMAGE} AS dgl_final_image
+Container manifest:
+/src/dgl
+├── README.md
+├── benchmarks # Benchmark scripts
+├── ... 
+├── build      # C/C++ build directory
+├── tests      # Test scripts
 
-ENV DGL_ARTIFACTS_DIR="/tmp/artifacts"
+Run the tests with:
+    cd /src/dgl/
+    bash tests/scripts/task_unit_test_rocm.sh pytorch gpu
+"
+EOT
 
-RUN mkdir -p ${DGL_ARTIFACTS_DIR}
-COPY --from=dgl_build /tmp/artifacts/*.whl ${DGL_ARTIFACTS_DIR}
-
-ARG ARG_CONDA_ENV=py_3.10
-
-ENV CONDA_DEFAULT_ENV=${ARG_CONDA_ENV}
-ENV CONDA_PREFIX="/opt/conda/envs/${ARG_CONDA_ENV}"
-ENV PATH="${CONDA_PREFIX}/bin:$PATH"
-
-RUN apt-get update \
-    && apt install -y clang-format-15
-
-# Use bash shell for all RUN commands
-SHELL ["/bin/bash", "-c"]
-
-RUN conda init \
-    && eval "$(conda shell.bash hook)" \
-    && conda activate ${ARG_CONDA_ENV} \
-    && pip install --upgrade pip \
-    && pip install wheel \
-    && pip install /tmp/artifacts/amd_dgl*.whl \
-    && rm -rf /tmp/artifacts
+ENV DGL_BACKEND=pytorch
+WORKDIR ${DGL_SRC_DIR}
