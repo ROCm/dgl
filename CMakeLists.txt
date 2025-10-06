@@ -13,6 +13,13 @@ include(cmake/util/Util.cmake)
 include(cmake/util/MshadowUtil.cmake)
 if (USE_CUDA)
   include(cmake/util/FindCUDA.cmake)
+elseif (USE_HIP)
+  # Enforce that GPU_TARGETS and CMAKE_HIP_ARCHITECTURES match
+  # we'll just use CMAKE_HIP_ARCHITECTURES from now on
+  # see https://rocm.docs.amd.com/en/latest/conceptual/cmake-packages.html#compiling-device-code-in-c-language-mode
+  if (NOT GPU_TARGETS STREQUAL CMAKE_HIP_ARCHITECTURES)
+    message(FATAL_ERROR "GPU_TARGETS and CMAKE_HIP_ARCHITECTURES must match")
+  endif()
 endif (USE_CUDA)
 
 # Options for building DGL.
@@ -274,7 +281,7 @@ elseif(USE_HIP)
   set_source_files_properties(${DGL_HIP_SRC} PROPERTIES LANGUAGE HIP)
   add_library(dgl SHARED ${DGL_SRC}) 
   target_compile_definitions(dgl PUBLIC -DDGL_USE_HIP=1)
-  set_property(TARGET dgl PROPERTY HIP_ARCHITECTURES ${ROCM_TARGET_ARCH})
+  set_property(TARGET dgl PROPERTY HIP_ARCHITECTURES ${CMAKE_HIP_ARCHITECTURES})
 else(USE_CUDA)
   add_library(dgl SHARED ${DGL_SRC})
 endif(USE_CUDA)
@@ -424,7 +431,7 @@ elseif (USE_HIP)
   )
   set_source_files_properties(${gpu_cache_src} PROPERTIES LANGUAGE HIP)
   add_library(gpu_cache STATIC ${gpu_cache_src})
-  set_property(TARGET gpu_cache PROPERTY HIP_ARCHITECTURES ${ROCM_TARGET_ARCH})
+  set_property(TARGET gpu_cache PROPERTY HIP_ARCHITECTURES ${CMAKE_HIP_ARCHITECTURES})
   target_include_directories(gpu_cache PRIVATE "third_party/HugeCTR/gpu_cache/include" "include")
   target_include_directories(dgl PRIVATE "third_party/HugeCTR/gpu_cache/include")
   target_compile_options(gpu_cache PUBLIC "-fPIC")
@@ -483,7 +490,9 @@ if(BUILD_TORCH)
         tensoradapter_pytorch
         ${CMAKE_COMMAND} -E env
         CMAKE_COMMAND=${CMAKE_CMD}
-        PYTORCH_ROCM_ARCH=${ROCM_TARGET_ARCH}
+        PYTORCH_ROCM_ARCH=${CMAKE_HIP_ARCHITECTURES}
+        GPU_TARGETS=${CMAKE_HIP_ARCHITECTURES}
+        CMAKE_HIP_ARCHITECTURES=${CMAKE_HIP_ARCHITECTURES}
         USE_HIP=${USE_HIP}
         EXTERNAL_DMLC_LIB_PATH=${EXTERNAL_DMLC_LIB_PATH}
         BINDIR=${CMAKE_CURRENT_BINARY_DIR}
@@ -562,8 +571,10 @@ if (BUILD_SPARSE)
         ALL
         ${CMAKE_COMMAND} -E env
         CMAKE_COMMAND=${CMAKE_CMD}
-	USE_HIP=${USE_HIP}
-	ROCM_TARGET_ARCH=${ROCM_TARGET_ARCH}
+        USE_HIP=${USE_HIP}
+        PYTORCH_ROCM_ARCH=${CMAKE_HIP_ARCHITECTURES}
+        GPU_TARGETS=${CMAKE_HIP_ARCHITECTURES}
+        CMAKE_HIP_ARCHITECTURES=${CMAKE_HIP_ARCHITECTURES}
         BINDIR=${CMAKE_CURRENT_BINARY_DIR}
         INCLUDEDIR="${DGL_INCLUDE_DIRS}"
         CFLAGS=${CMAKE_C_FLAGS}
@@ -623,13 +634,15 @@ if (BUILD_GRAPHBOLT)
         ALL
         ${CMAKE_COMMAND} -E env
         CMAKE_COMMAND=${CMAKE_CMD}
-        PYTORCH_ROCM_ARCH=${ROCM_TARGET_ARCH}
+        PYTORCH_ROCM_ARCH=${CMAKE_HIP_ARCHITECTURES}
+        GPU_TARGETS=${CMAKE_HIP_ARCHITECTURES}
+        CMAKE_HIP_ARCHITECTURES=${CMAKE_HIP_ARCHITECTURES}
         USE_HIP=${USE_HIP}
         USE_LIBURING=${USE_LIBURING}
         BINDIR=${CMAKE_CURRENT_BINARY_DIR}
         CFLAGS=${CMAKE_C_FLAGS}
         CXXFLAGS=${CMAKE_CXX_FLAGS}
-        CMAKE_HIP_ARCHITECTURES=${ROCM_TARGET_ARCH}
+        CMAKE_HIP_ARCHITECTURES=${CMAKE_HIP_ARCHITECTURES}
         LDFLAGS=${CMAKE_SHARED_LINKER_FLAGS}
         bash ${BUILD_SCRIPT} ${TORCH_PYTHON_INTERPS}
         DEPENDS ${BUILD_SCRIPT}
