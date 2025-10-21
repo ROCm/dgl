@@ -7,7 +7,6 @@ FROM ${BASE_IMAGE} AS dgl_build
 
 # NOTE: This dockerfile **assumes** that BASE_IMAGE comes with the appropriate
 # python executable in the path.
-
 ARG ARG_MAX_JOBS=24
 ENV MAX_JOBS=${ARG_MAX_JOBS:-24}
 
@@ -57,7 +56,11 @@ RUN python -m pip install build wheel
 # Install an editable version of the package so we can make source changes and test them
 RUN python -m pip install -e .
 # Build the wheel file for packaging (won't update automatically with source changes)
-RUN python -m build --wheel
+# DGL_PACKAGE_SUFFIX is used to differentiate the wheels from different builds.
+RUN export TORCH_VERSION=torch$(python -c 'import torch; print(torch.__version__)') && \
+    export OS_NAME_VERSION=$(. /etc/os-release && echo ${ID}${VERSION_ID}) && \
+    export DGL_PACKAGE_SUFFIX="+${TORCH_VERSION}+${OS_NAME_VERSION}" && \
+    python -m build --wheel
 
 
 # Store the artifacts
