@@ -16,7 +16,6 @@
         "CMAKE_BUILD_TYPE": "Release",
         "USE_HIP": "ON",
         "GPU_TARGETS": "gfx90a,gfx942",
-        "ROCM_TARGET_ARCH": "gfx90a,gfx942",
         "CMAKE_HIP_ARCHITECTURES": "gfx90a,gfx942",
         "CMAKE_INSTALL_PREFIX": "/opt/rocm",
         "BUILD_CPP_TEST": "ON",
@@ -37,6 +36,18 @@
         "CMAKE_CXX_COMPILER":"clang++",
         "CMAKE_C_FLAGS": "-ftime-trace",
         "CMAKE_CXX_FLAGS": "-ftime-trace"
+      }
+    },  
+    {
+      "name": "rocm-cov",
+      "description": "Build with ROCm and llvm-cov for code coverage",
+      "inherits": ["rocm-llvm"],
+      "cacheVariables": {
+        "BUILD_TYPE": "Debug",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_FLAGS":   "-O0 -g3 -ggdb -fprofile-instr-generate -fcoverage-mapping -Wl,--allow-multiple-definition",
+        "CMAKE_CXX_FLAGS": "-O0 -g3 -ggdb -fprofile-instr-generate -fcoverage-mapping -Wl,--allow-multiple-definition",
+        "CMAKE_HIP_FLAGS": "-O0 -g3 -ggdb -fprofile-instr-generate -fcoverage-mapping -Wl,--allow-multiple-definition"
       }
     }
   ]

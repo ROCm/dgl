@@ -39,7 +39,7 @@ macro(dgl_config_hip linker_libs)
   message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
   message(STATUS "CMAKE_HIP_FLAGS: ${CMAKE_HIP_FLAGS}")
 
-  list(APPEND ROCM_HIPCC_FLAGS --offload-arch=${ROCM_TARGET_ARCH})
+  list(APPEND ROCM_HIPCC_FLAGS --offload-arch=${CMAKE_HIP_ARCHITECTURES})
   list(APPEND ROCM_HIPCC_FLAGS "--expt-extended-lambda;-Wno-deprecated-declarations;-std=c++17")
   message(STATUS "ROCM_HIPCC_FLAGS: ${ROCM_HIPCC_FLAGS}")
 

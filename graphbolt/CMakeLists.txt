@@ -156,7 +156,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     ExternalProject_Add(
       liburing
       SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/liburing
-      CONFIGURE_COMMAND <SOURCE_DIR>/configure --cc=${LIBURING_C_COMPILER} --cxx=${CMAKE_CXX_COMPILER} --prefix=/
+      CONFIGURE_COMMAND <SOURCE_DIR>/configure --cc=${LIBURING_C_COMPILER} --cxx=${CMAKE_CXX_COMPILER} --prefix=/ --use-libc
       # In order to avoid the error `error: redefinition of 'struct in6_pktinfo'` on ubi7
       # when building examples, let's build src only.
       BUILD_COMMAND bash -c "make -j 4 -C src/"
