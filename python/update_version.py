@@ -8,6 +8,7 @@ List of affected files:
 - dgl-root/include/dgl/runtime/c_runtime_api.h
 - dgl-root/conda/dgl/meta.yaml
 """
+
 import os
 import re
 
@@ -16,8 +17,16 @@ import re
 # (usually "aYYMMDD")
 # The environment variable DGL_VERSION_SUFFIX is the local version label
 # suffix for indicating CPU and CUDA versions as in PEP 440 (e.g. "+cu102")
-__version__ = os.getenv("DGL_RELEASE_VERSION", "") + os.getenv("DGL_PRERELEASE", "")
-__version__ += os.getenv("DGL_VERSION_SUFFIX", "")
+__version__ = os.getenv("DGL_RELEASE_VERSION", "2.4.0+amd0") + os.getenv(
+    "DGL_PRERELEASE", ""
+)
+# we can only have a since + separating our public and local version labels
+# see https://peps.python.org/pep-0440/#local-version-identifiers
+# replace the + with _ in the VERSION_SUFFIX passed from the ENV
+version_suffix = os.getenv("DGL_VERSION_SUFFIX", "").replace("+", "_")
+if "+" in __version__:
+    version_suffix = version_suffix.replace("+", "_")
+__version__ += version_suffix
 print(__version__)
 
 # Implementations

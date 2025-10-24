@@ -45,6 +45,14 @@ ENV DGL_ARTIFACTS_DIR="${ARG_DGL_ARTIFACTS_DIR}"
 # Install GraphBolt dependencies
 RUN mkdir -p /tmp/deps && cd /tmp/deps && bash ${DGL_SRC_DIR}/script/install_graphbolt_deps.sh
 
+# Dynamically update the package version based on the build config
+WORKDIR ${DGL_SRC_DIR}/python
+# DGL_VERSION_SUFFIX is used to differentiate the wheels from different builds.
+RUN export TORCH_VERSION=torch$(python -c 'import torch; print(torch.__version__)') && \
+    export OS_NAME_VERSION=$(. /etc/os-release && echo ${ID}${VERSION_ID}) && \
+    export DGL_VERSION_SUFFIX="_${TORCH_VERSION}_${OS_NAME_VERSION}" && \
+    python update_version.py
+
 # Configure and build DGL
 WORKDIR ${DGL_SRC_DIR}
 RUN cmake --preset rocm -DCMAKE_HIP_ARCHITECTURES=${ARG_GPU_BUILD_TARGETS} -DGPU_TARGETS=${ARG_GPU_BUILD_TARGETS}  
@@ -56,11 +64,7 @@ RUN python -m pip install build wheel
 # Install an editable version of the package so we can make source changes and test them
 RUN python -m pip install -e .
 # Build the wheel file for packaging (won't update automatically with source changes)
-# DGL_PACKAGE_SUFFIX is used to differentiate the wheels from different builds.
-RUN export TORCH_VERSION=torch$(python -c 'import torch; print(torch.__version__)') && \
-    export OS_NAME_VERSION=$(. /etc/os-release && echo ${ID}${VERSION_ID}) && \
-    export DGL_PACKAGE_SUFFIX="+${TORCH_VERSION}+${OS_NAME_VERSION}" && \
-    python -m build --wheel
+RUN python -m build --wheel
 
 
 # Store the artifacts
