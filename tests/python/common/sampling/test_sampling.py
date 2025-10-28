@@ -1132,7 +1132,6 @@ def test_sample_neighbors_noprob():
     # _test_sample_neighbors(True)
 
 
-@unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 def test_sample_labors_noprob():
     _test_sample_labors(False, None)
 
@@ -1144,7 +1143,6 @@ def test_sample_neighbors_prob():
     # _test_sample_neighbors(True)
 
 
-@unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 def test_sample_labors_prob():
     _test_sample_labors(False, "prob")
 
