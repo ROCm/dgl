@@ -11,6 +11,7 @@ if (USE_HIP)
   add_definitions(-DGRAPHBOLT_USE_HIP)
   add_definitions(-DDGL_USE_HIP)
   add_definitions(-DHIP_ENABLE_WARP_SYNC_BUILTINS)
+  add_definitions(-D_LIBCUDACXX_ALLOW_UNSUPPORTED_ARCHITECTURE)
 
   # Dependencies
   ## ROCm-DS dependencies

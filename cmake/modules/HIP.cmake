@@ -31,6 +31,7 @@ macro(dgl_config_hip linker_libs)
   option(DGL_USE_HIP "Enable HIP" ON)
   add_definitions(-DHIP_ENABLE_WARP_SYNC_BUILTINS)
   add_definitions(-DHIPBLAS_USE_HIP_HALF)
+  add_definitions(-D_LIBCUDACXX_ALLOW_UNSUPPORTED_ARCHITECTURE)
 
   set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} -I${HIP_INCLUDE_DIRS}")
   set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} -Wunused-result -w")
