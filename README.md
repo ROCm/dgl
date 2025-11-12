@@ -1,19 +1,30 @@
 # DGL with ROCm Support
 
-This version of DGL is built with ROCm support and offers several options to use the library:
-1. Install with pypi (not available yet)
+This fork of DGL is built with ROCm support and offers several options to use the library:
+1. Install with pypi
 2. Use prebuilt docker image
 3. Build from source
 
 For a complete list of versions available through docker, please see the ROCm docs [here](https://rocm.docs.amd.com/en/latest/compatibility/ml-compatibility/dgl-compatibility.html).
 
-## 1. Install with pypi (not available yet)
+## 1. Install with pypi
 
+See the list of available wheels [here](https://pypi.amd.com/rocm-7.0.0/packages/amd-dgl/amd_dgl-2.4.0+amd0.torch2.6.0.rocm7.0.0.git2e48b21f.ubuntu24.4-cp312-cp312-linux_x86_64.whl).
+
+Match the 1) torch version, 2) rocm version, 3) python version, and 4) ubuntu versions in your environment with the ones in the wheel name.
+The [`rocm/pytorch`](https://hub.docker.com/r/rocm/pytorch) images are a reliable starting point here.
+
+```bash
+# activate your virtual environment
+pip install https://pypi.amd.com/rocm-7.0.0/packages/amd-dgl/amd_dgl-2.4.0+amd0.torch2.6.0.rocm7.0.0.git2e48b21f.ubuntu24.4-cp312-cp312-linux_x86_64.whl
+```
 
 ## 2. Use prebuilt docker image
+See the [`rocm/dgl`](https://hub.docker.com/r/rocm/dgl/tags) page on Docker Hub for a complete list of versions available.
 ```bash
 # pull the docker image (change the tag to the one you want)
-docker pull rocm/dgl:<TAG>
+TAG="dgl-2.4.0.amd0_rocm7.0.0_ubuntu24.04_py3.12_pytorch_2.6.0"
+docker pull "rocm/dgl:${TAG}"
 docker run \
   -it \
   --cap-add=SYS_PTRACE \
@@ -23,7 +34,7 @@ docker run \
    --group-add video \
    --ipc=host \
    --shm-size 8G \
-   rocm/dgl:<TAG>
+   "rocm/dgl:${TAG}"
 ```
 
 ## 3. Build from source
