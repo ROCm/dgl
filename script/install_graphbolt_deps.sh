@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-export CC=/opt/rocm/llvm/bin/clang
-export CXX=/opt/rocm/llvm/bin/clang++
+export CC=${CC:-/opt/rocm/llvm/bin/clang}
+export CXX=${CXX:-/opt/rocm/llvm/bin/clang++}
 
 # set the install prefix to the cwd/install
 # INSTALL_PREFIX=$(pwd)/install
-INSTALL_PREFIX=/opt/rocm
+INSTALL_PREFIX=${ROCM_PATH:-/opt/rocm}
 FILE_SOURCE_DIR=$(dirname $(realpath $0))
 DEPS_DIR=$(pwd)
 
@@ -39,7 +39,7 @@ cd ${DEPS_DIR}
 
 
 # if ROCM < 7.0 we also need to install rocThrust
-ROCM_VERSION=$(/opt/rocm/bin/hipconfig --version)
+ROCM_VERSION=$(${INSTALL_PREFIX}/bin/hipconfig --version)
 #strip the major version from the ROCM_VERSION (before the dot)
 ROCM_VERSION=${ROCM_VERSION%%.*}
 echo "Working with ROCm Major Version: $ROCM_VERSION"

@@ -1,0 +1,62 @@
+# This is a multi-stage dockerfile that encapsulates the CI process for DGL
+# It starts off with a manylinux base image and then moves on to building
+# DGL through different stages. Final related artifacts are made available
+# via scratch stages.
+
+# Stage 1: Manylinux Base Image + ROCm 7.0
+ARG BASE_IMAGE=quay.io/pypa/manylinux_2_28_x86_64
+FROM ${BASE_IMAGE} AS rocm_base_image
+
+ARG ROCM_VERSION="7.9"
+ARG ROCM_BUILD_ID="7.9.0rc1"
+ARG ROCM_PYPI_BASE_URL="https://repo.amd.com/rocm/whl"
+ARG AMDGPU_VARIANT="gfx94X-dcgpu"
+
+ENV ROCM_PYPI_URL="${ROCM_PYPI_BASE_URL}/${AMDGPU_VARIANT}"
+ARG PYTHON_VERSION="3.9"
+
+# Installing ROCm using ROCk.
+# Need to start with a Python 3.12 virtual environment named rocm-venv to 
+# install ROCk and then use it to install ROCm.
+RUN /opt/python/cp312-cp312/bin/python -m venv rocm-venv
+RUN rocm-venv/bin/pip install --index-url ${ROCM_PYPI_URL} "rocm[libraries,devel]"
+
+# Save ROCm paths to a sourceable file
+RUN set -e && \
+    ROCM_PATH=$(rocm-venv/bin/rocm-sdk path --root) && \
+    ROCM_CMAKE_PATH=$(rocm-venv/bin/rocm-sdk path --cmake) && \
+    ROCM_BIN_PATH=$(rocm-venv/bin/rocm-sdk path --bin) && \
+    echo "DEBUG: ROCM_PATH=${ROCM_PATH}" && \
+    echo "DEBUG: ROCM_CMAKE_PATH=${ROCM_CMAKE_PATH}" && \
+    echo "DEBUG: ROCM_BIN_PATH=${ROCM_BIN_PATH}" && \
+    [ -n "${ROCM_PATH}" ] || { echo "ERROR: ROCM_PATH is empty"; exit 1; } && \
+    [ -n "${ROCM_CMAKE_PATH}" ] || { echo "ERROR: ROCM_CMAKE_PATH is empty"; exit 1; } && \
+    [ -n "${ROCM_BIN_PATH}" ] || { echo "ERROR: ROCM_BIN_PATH is empty"; exit 1; } && \
+    { \
+        echo "export ROCM_PATH=${ROCM_PATH}"; \
+        echo "export ROCM_CMAKE_PATH=${ROCM_CMAKE_PATH}"; \
+        echo "export ROCM_BIN_PATH=${ROCM_BIN_PATH}"; \
+    } > /etc/rocm_env.sh && \
+    cat /etc/rocm_env.sh
+
+# Stage 2: Setup DGL build environment
+FROM rocm_base_image AS dgl_build_env
+
+ARG TORCH_VERSION="2.7.1+rocm7.9.0rc1"
+
+# Install torch
+RUN rocm-venv/bin/pip install --index-url ${ROCM_PYPI_URL} torch
+
+# Install clang-format-15
+RUN rocm-venv/bin/pip install clang-format==15.*
+
+# Install ninja
+RUN yum install -y ninja-build
+
+# Stage 3: Copy DGL sources and build dynamic dependencies
+FROM dgl_build_env AS dgl_build_dyn_deps
+
+ENV DGL_SRC_DIR="/src/dgl"
+
+COPY . ${DGL_SRC_DIR}
+
