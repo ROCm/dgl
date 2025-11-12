@@ -28,13 +28,6 @@ ENV DGL_SRC_DIR="/src/dgl"
 RUN mkdir -p ${DGL_SRC_DIR}
 COPY . ${DGL_SRC_DIR}
 
-# Clean up remnants of any previous builds
-RUN rm -rf ${DGL_SRC_DIR}/build
-RUN rm -rf ${DGL_SRC_DIR}/graphbolt/build
-RUN rm -rf ${DGL_SRC_DIR}/dgl_sparse/build
-RUN rm -rf ${DGL_SRC_DIR}/tensoradapter/pytorch/build
-RUN rm -rf ${DGL_SRC_DIR}/python/build ${DGL_SRC_DIR}/python/dist ${DGL_SRC_DIR}/python/*.egg-info ${DGL_SRC_DIR}/python/libdgl.so
-
 # Set GPU build targets
 ARG ARG_GPU_BUILD_TARGETS="gfx90a,gfx942"
 ENV GPU_BUILD_TARGETS=${ARG_GPU_BUILD_TARGETS}
