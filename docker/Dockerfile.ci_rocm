@@ -16,16 +16,16 @@ ENV ROCM_PYPI_URL="${ROCM_PYPI_BASE_URL}/${AMDGPU_VARIANT}"
 ARG PYTHON_VERSION="3.9"
 
 # Installing ROCm using ROCk.
-# Need to start with a Python 3.12 virtual environment named rocm-venv to 
+# Need to start with a Python 3.12 virtual environment to 
 # install ROCk and then use it to install ROCm.
-RUN /opt/python/cp312-cp312/bin/python -m venv rocm-venv
-RUN rocm-venv/bin/pip install --index-url ${ROCM_PYPI_URL} "rocm[libraries,devel]"
+RUN /opt/python/cp312-cp312/bin/python -m venv /opt/rocm \
+    && /opt/rocm/bin/pip install --index-url ${ROCM_PYPI_URL} "rocm[libraries,devel]"
 
 # Save ROCm paths to a sourceable file
 RUN set -e && \
-    ROCM_PATH=$(rocm-venv/bin/rocm-sdk path --root) && \
-    ROCM_CMAKE_PATH=$(rocm-venv/bin/rocm-sdk path --cmake) && \
-    ROCM_BIN_PATH=$(rocm-venv/bin/rocm-sdk path --bin) && \
+    ROCM_PATH=$(/opt/rocm/bin/rocm-sdk path --root) && \
+    ROCM_CMAKE_PATH=$(/opt/rocm/bin/rocm-sdk path --cmake) && \
+    ROCM_BIN_PATH=$(/opt/rocm/bin/rocm-sdk path --bin) && \
     echo "DEBUG: ROCM_PATH=${ROCM_PATH}" && \
     echo "DEBUG: ROCM_CMAKE_PATH=${ROCM_CMAKE_PATH}" && \
     echo "DEBUG: ROCM_BIN_PATH=${ROCM_BIN_PATH}" && \
@@ -36,6 +36,7 @@ RUN set -e && \
         echo "export ROCM_PATH=${ROCM_PATH}"; \
         echo "export ROCM_CMAKE_PATH=${ROCM_CMAKE_PATH}"; \
         echo "export ROCM_BIN_PATH=${ROCM_BIN_PATH}"; \
+        echo "export PATH=\${ROCM_BIN_PATH}:\${PATH}"; \
     } > /etc/rocm_env.sh && \
     cat /etc/rocm_env.sh
 
@@ -44,17 +45,70 @@ FROM rocm_base_image AS dgl_build_env
 
 ARG TORCH_VERSION="2.7.1+rocm7.9.0rc1"
 
-# Install torch
-RUN rocm-venv/bin/pip install --index-url ${ROCM_PYPI_URL} torch
+RUN source /etc/rocm_env.sh
+
+# Install build toolchain
+RUN yum -y install ninja-build clang gcc gcc-c++ libstdc++-devel \
+    &&yum clean all
 
 # Install clang-format-15
-RUN rocm-venv/bin/pip install clang-format==15.*
+RUN /opt/rocm/bin/pip install clang-format==15.*
 
-# Install ninja
-RUN yum install -y ninja-build
+# Install torch
+RUN /opt/rocm/bin/pip install --index-url ${ROCM_PYPI_URL} torch
+
+# Create script to print build environment details
+RUN { \
+    echo '#!/usr/bin/env bash'; \
+    echo 'set -e'; \
+    echo ''; \
+    echo 'echo "=== DGL Build Environment Details ==="'; \
+    echo 'echo ""'; \
+    echo ''; \
+    echo 'echo "Ninja version: $(ninja --version)"'; \
+    echo 'echo "GCC version: $(gcc --version | head -n1)"'; \
+    echo 'echo "g++ version: $(g++ --version | head -n1)"'; \
+    echo 'echo "clang version: $(clang --version | head -n1)"'; \
+    echo 'echo "clang++ version: $(clang++ --version | head -n1)"'; \
+    echo "echo \"PyTorch version: \$(/opt/rocm/bin/python -W ignore -c 'import torch; print(torch.__version__)' 2>/dev/null || echo 'Not installed')\""; \
+    echo ''; \
+    echo 'echo ""'; \
+    echo 'echo "=== C++ Standard Support ==="'; \
+    echo 'TMPFILE=$(mktemp --suffix=.cpp)'; \
+    echo 'echo "int main() { return 0; }" > $TMPFILE'; \
+    echo ''; \
+    echo '# Function to convert __cplusplus value to readable format'; \
+    echo 'convert_cpp_std() {'; \
+    echo '  case "$1" in'; \
+    echo '    199711) echo "C++98" ;;'; \
+    echo '    201103) echo "C++11" ;;'; \
+    echo '    201402) echo "C++14" ;;'; \
+    echo '    201703) echo "C++17" ;;'; \
+    echo '    202002) echo "C++20" ;;'; \
+    echo '    202302) echo "C++23" ;;'; \
+    echo '    *) echo "Unknown ($1)" ;;'; \
+    echo '  esac'; \
+    echo '}'; \
+    echo ''; \
+    echo 'GCC_STD=$(g++ -dM -E -x c++ -std=c++17 $TMPFILE | grep __cplusplus | awk "{print \$3}" | sed "s/L$//" )'; \
+    echo 'echo "GCC C++ standard: $(convert_cpp_std $GCC_STD)"'; \
+    echo ''; \
+    echo 'CLANG_STD=$(clang++ -dM -E -x c++ -std=c++17 $TMPFILE | grep __cplusplus | awk "{print \$3}" | sed "s/L$//" )'; \
+    echo 'echo "Clang C++ standard: $(convert_cpp_std $CLANG_STD)"'; \
+    echo ''; \
+    echo 'rm -f $TMPFILE'; \
+    echo ''; \
+    echo 'echo ""'; \
+    echo 'echo "==================================="'; \
+    } > /print-dgl-build-env.sh && \
+    chmod +x /print-dgl-build-env.sh
 
 # Stage 3: Copy DGL sources and build dynamic dependencies
 FROM dgl_build_env AS dgl_build_dyn_deps
+
+RUN source /etc/rocm_env.sh
+
+RUN /print-dgl-build-env.sh
 
 ENV DGL_SRC_DIR="/src/dgl"
 
