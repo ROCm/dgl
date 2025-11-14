@@ -1,0 +1,81 @@
+# "Copyright Advanced Micro Devices, Inc.
+# Licensed under the Apache License Version 2.0"
+
+#############################################################################
+ARG BASE_IMAGE=rocm/pytorch:rocm7.0.2_ubuntu24.04_py3.12_pytorch_release_2.6.0
+FROM ${BASE_IMAGE} AS dgl_build
+
+# NOTE: This dockerfile **assumes** that BASE_IMAGE comes with the appropriate
+# python executable in the path.
+
+ARG ARG_MAX_JOBS=24
+ENV MAX_JOBS=${ARG_MAX_JOBS:-24}
+
+# Install basic tools
+RUN apt-get update \
+    && apt install -y clang-format-15 ninja-build tree 
+
+#Updating to latest version of Cmake for Ubuntu 22.04
+RUN apt-get update && apt-get install -y wget build-essential \
+ && wget -qO- https://cmake.org/files/v3.28/cmake-3.28.3-linux-x86_64.tar.gz \
+ | tar --strip-components=1 -xz -C /usr/local
+
+# Use bash shell for all RUN commands
+SHELL ["/bin/bash", "--login", "-c"]
+    
+# Copy Sources
+ENV DGL_SRC_DIR="/src/dgl"
+RUN mkdir -p ${DGL_SRC_DIR}
+COPY . ${DGL_SRC_DIR}
+
+# Set GPU build targets
+ARG ARG_GPU_BUILD_TARGETS="gfx90a,gfx942"
+ENV GPU_BUILD_TARGETS=${ARG_GPU_BUILD_TARGETS}
+
+ENV DGL_BUILD_DIR="${DGL_SRC_DIR}/build"
+ARG ARG_DGL_ARTIFACTS_DIR="/artifacts"
+ENV DGL_ARTIFACTS_DIR="${ARG_DGL_ARTIFACTS_DIR}"
+
+# Install GraphBolt dependencies
+RUN mkdir -p /tmp/deps && cd /tmp/deps && bash ${DGL_SRC_DIR}/script/install_graphbolt_deps.sh
+
+# Configure and build DGL
+WORKDIR ${DGL_SRC_DIR}
+RUN cmake --preset rocm -DCMAKE_HIP_ARCHITECTURES=${ARG_GPU_BUILD_TARGETS} -DGPU_TARGETS=${ARG_GPU_BUILD_TARGETS}  
+RUN cmake --build ${DGL_BUILD_DIR} --parallel ${MAX_JOBS}  
+
+WORKDIR ${DGL_SRC_DIR}/python
+# Make sure we have wheel and build installed
+RUN python -m pip install build wheel
+# Install an editable version of the package so we can make source changes and test them
+RUN python -m pip install -e .
+# Build the wheel file for packaging (won't update automatically with source changes)
+RUN python -m build --wheel
+
+
+# Store the artifacts
+RUN mkdir -p ${DGL_ARTIFACTS_DIR}
+RUN cp dist/*.whl ${DGL_ARTIFACTS_DIR}
+
+# Setup for the user
+RUN cat <<'EOT' >> ~/.bashrc
+echo "
+Welcome to the DGL CI container!
+
+Container manifest:
+/src/dgl
+├── README.md
+├── benchmarks # Benchmark scripts
+├── ... 
+├── build      # C/C++ build directory
+├── tests      # Test scripts
+
+Run the tests with:
+    cd /src/dgl/
+    bash tests/scripts/task_unit_test_rocm.sh pytorch gpu
+"
+EOT
+
+# Set the default command to an interactive bash shell.
+WORKDIR ${DGL_SRC_DIR}
+CMD ["/bin/bash"]

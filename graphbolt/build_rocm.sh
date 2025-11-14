@@ -19,18 +19,23 @@ else
 fi
 
 CMAKE_FLAGS="-DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_HIP_ARCHITECTURES=${CMAKE_HIP_ARCHITECTURES} -DUSE_HIP=$USE_HIP -DGPU_TARGETS=${CMAKE_HIP_ARCHITECTURES}"
+CMAKE_FLAGS+=" -DCMAKE_PREFIX_PATH='$(rocm-sdk path --root)/lib/cmake;$(rocm-sdk path --root)/lib64/cmake;$(rocm-sdk path --root)/lib64/rapids/cmake'"
+CMAKE_FLAGS+=" -DCMAKE_INSTALL_PREFIX=$(rocm-sdk path --root)"
+CMAKE_FLAGS+=" -DROCM_HOME=$(rocm-sdk path --root)"
+CMAKE_FLAGS+=" -DCMAKE_HIP_COMPILER_ROCM_ROOT=$(rocm-sdk path --root)"
+CMAKE_FLAGS+=" -DHIP_PLATFORM=amd"
 echo "graphbolt cmake flags: $CMAKE_FLAGS"
 
 if [ $# -eq 0 ]; then
   $CMAKE_COMMAND $CMAKE_FLAGS -S $GRAPHBOLT_SRCDIR -B $GRAPHBOLT_BUILD_DIR
-  cmake --build $GRAPHBOLT_BUILD_DIR --parallel
+  cmake --build $GRAPHBOLT_BUILD_DIR --parallel --verbose
 else
   for PYTHON_INTERP in $@; do
     TORCH_VER=$($PYTHON_INTERP -c 'import torch; print(torch.__version__.split("+")[0])')
     mkdir -p $TORCH_VER
     cd $TORCH_VER
     $CMAKE_COMMAND $CMAKE_FLAGS -DPYTHON_INTERP=$PYTHON_INTERP -S $GRAPHBOLT_SRCDIR -B $GRAPHBOLT_BUILD_DIR
-    cmake --build $GRAPHBOLT_BUILD_DIR --parallel
+    cmake --build $GRAPHBOLT_BUILD_DIR --parallel --verbose
     cd ..
   done
 fi
