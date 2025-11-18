@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
-export CC=${CC:-/opt/rocm/llvm/bin/clang}
-export CXX=${CXX:-/opt/rocm/llvm/bin/clang++}
+export CC=${ROCM_CC_PATH:-/opt/rocm/llvm/bin/clang}
+export CXX=${ROCM_CXX_PATH:-/opt/rocm/llvm/bin/clang++}
+export HIP_PLATFORM=${ROCM_HIP_PLATFORM:-amd}
+
+echo "DEBUG: CC: ${CC}"
+echo "DEBUG: CXX: ${CXX}"
+echo "DEBUG: HIP_PLATFORM: ${HIP_PLATFORM}"
+echo "DEBUG: ROCM_HOME: ${ROCM_HOME}"
+echo "DEBUG: ROCM_CC_PATH: ${ROCM_CC_PATH}"
+echo "DEBUG: ROCM_CXX_PATH: ${ROCM_CXX_PATH}"
+echo "DEBUG: ROCM_GPU_TARGETS: ${ROCM_GPU_TARGETS}"
+echo "DEBUG: ROCM_VERSION: ${ROCM_VERSION}"
+echo "DEBUG: PATH: ${PATH}"
 
 # set the install prefix to the cwd/install
 # INSTALL_PREFIX=$(pwd)/install
-INSTALL_PREFIX=${ROCM_PATH:-/opt/rocm}
+INSTALL_PREFIX=${ROCM_HOME:-/opt/rocm}
 FILE_SOURCE_DIR=$(dirname $(realpath $0))
 DEPS_DIR=$(pwd)
 
@@ -13,7 +24,12 @@ git clone https://github.com/ROCm/libhipcxx.git
 cd libhipcxx 
 git checkout v2.2.0 
 cmake -B build \
-        -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX}
+        -DGPU_TARGETS=${ROCM_GPU_TARGETS} \
+        -DCMAKE_HIP_PLATFORM=${HIP_PLATFORM} \
+        -DCMAKE_HIP_COMPILER=${ROCM_CXX_PATH} \
+        -DCMAKE_HIP_COMPILER_ROCM_ROOT=${ROCM_HOME} \
+        -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
+        -DLIBCUDACXX_ENABLE_LIBCUDACXX_TESTS=OFF
 cmake --build build --target install 
 cd ${DEPS_DIR}
 
@@ -24,6 +40,11 @@ git clone https://github.com/tpopp/rocThrust.git
 cd rocThrust
 git checkout 613db9a025709fb18f2a676543a17850bd231b04
 cmake -B build \
+        -DGPU_TARGETS=${ROCM_GPU_TARGETS} \
+        -DCMAKE_HIP_PLATFORM=${HIP_PLATFORM} \
+        -DCMAKE_HIP_COMPILER=${ROCM_CXX_PATH} \
+        -DCMAKE_HIP_COMPILER_ROCM_ROOT=${ROCM_HOME} \
+        -DCMAKE_HIP_ARCHITECTURES=${ROCM_GPU_TARGETS} \
         -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX}
 cmake --build build --target install
 cd ${DEPS_DIR}
@@ -33,6 +54,11 @@ git clone https://github.com/tpopp/hipCollections.git
 cd hipCollections
 git checkout 6e31da8fd309f229d28adde8583a30bb4efaf1b7 
 cmake -B build \
+        -DGPU_TARGETS=${ROCM_GPU_TARGETS} \
+        -DCMAKE_HIP_PLATFORM=${HIP_PLATFORM} \
+        -DCMAKE_HIP_COMPILER=${ROCM_CXX_PATH} \
+        -DCMAKE_HIP_COMPILER_ROCM_ROOT=${ROCM_HOME} \
+        -DCMAKE_HIP_ARCHITECTURES=${ROCM_GPU_TARGETS} \
         -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} -DINSTALL_CUCO=ON -DBUILD_TESTS=OFF -DBUILD_BENCHMARKS=OFF -DBUILD_EXAMPLES=OFF
 cmake --build build --target install
 cd ${DEPS_DIR}

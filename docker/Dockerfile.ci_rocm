@@ -7,36 +7,67 @@
 ARG BASE_IMAGE=quay.io/pypa/manylinux_2_28_x86_64
 FROM ${BASE_IMAGE} AS rocm_base_image
 
-ARG ROCM_VERSION="7.9"
+ARG PYTHON_VERSION="3.12"
 ARG ROCM_BUILD_ID="7.9.0rc1"
 ARG ROCM_PYPI_BASE_URL="https://repo.amd.com/rocm/whl"
+ARG ROCM_PYPI_TRUSTED_HOST=""
 ARG AMDGPU_VARIANT="gfx94X-dcgpu"
 
-ENV ROCM_PYPI_URL="${ROCM_PYPI_BASE_URL}/${AMDGPU_VARIANT}"
-ARG PYTHON_VERSION="3.9"
+ENV ROCK_PYPI_URL="${ROCM_PYPI_BASE_URL}/${AMDGPU_VARIANT}"
+ENV ROCK_INSTALL_PATH="/opt/rocm"
 
 # Installing ROCm using ROCk.
-# Need to start with a Python 3.12 virtual environment to 
+# Need to start with a Python virtual environment to 
 # install ROCk and then use it to install ROCm.
-RUN /opt/python/cp312-cp312/bin/python -m venv /opt/rocm \
-    && /opt/rocm/bin/pip install --index-url ${ROCM_PYPI_URL} "rocm[libraries,devel]"
+RUN PYTHON_SHORT=$(echo ${PYTHON_VERSION} | tr -d '.') && \
+    PYTHON_PATH="/opt/python/cp${PYTHON_SHORT}-cp${PYTHON_SHORT}/bin/python" && \
+    echo "Using Python: ${PYTHON_PATH} (version ${PYTHON_VERSION})" && \
+    echo "ROCK PyPI URL: ${ROCK_PYPI_URL}" && \
+    ${PYTHON_PATH} -m venv ${ROCK_INSTALL_PATH} && \
+    if [ -n "${ROCM_PYPI_TRUSTED_HOST}" ]; then \
+        echo "Adding ${ROCM_PYPI_TRUSTED_HOST} to pip configuration"; \
+        ${ROCK_INSTALL_PATH}/bin/pip config set global.trusted-host ${ROCM_PYPI_TRUSTED_HOST}; \
+    else \
+        echo "No ROCM_PYPI_TRUSTED_HOST provided"; \
+    fi && \
+    ${ROCK_INSTALL_PATH}/bin/pip install --index-url ${ROCK_PYPI_URL} "rocm[libraries,devel]"
 
 # Save ROCm paths to a sourceable file
 RUN set -e && \
-    ROCM_PATH=$(/opt/rocm/bin/rocm-sdk path --root) && \
+    ROCM_HOME=$(/opt/rocm/bin/rocm-sdk path --root) && \
+    ROCM_VERSION=$(/opt/rocm/bin/rocm-sdk version) && \
     ROCM_CMAKE_PATH=$(/opt/rocm/bin/rocm-sdk path --cmake) && \
     ROCM_BIN_PATH=$(/opt/rocm/bin/rocm-sdk path --bin) && \
-    echo "DEBUG: ROCM_PATH=${ROCM_PATH}" && \
+    ROCM_LLVM_PATH=$(dirname $(dirname $(realpath ${ROCM_HOME}/llvm/bin/clang))) && \
+    ROCM_CC_PATH=${ROCM_LLVM_PATH}/bin/clang && \
+    ROCM_CXX_PATH=${ROCM_LLVM_PATH}/bin/clang++ && \
+    ROCM_GPU_TARGETS=$(/opt/rocm/bin/rocm-sdk targets) && \
+    echo "DEBUG: ROCK_PYPI_URL=${ROCK_PYPI_URL}" && \
+    echo "DEBUG: ROCK_INSTALL_PATH=${ROCK_INSTALL_PATH}" && \
+    echo "DEBUG: ROCM_HOME=${ROCM_HOME}" && \
+    echo "DEBUG: ROCM_VERSION: ${ROCM_VERSION}" && \
     echo "DEBUG: ROCM_CMAKE_PATH=${ROCM_CMAKE_PATH}" && \
     echo "DEBUG: ROCM_BIN_PATH=${ROCM_BIN_PATH}" && \
-    [ -n "${ROCM_PATH}" ] || { echo "ERROR: ROCM_PATH is empty"; exit 1; } && \
+    echo "DEBUG: ROCM_LLVM_PATH=${ROCM_LLVM_PATH}" && \
+    echo "DEBUG: ROCM_CC_PATH=${ROCM_CC_PATH}" && \
+    echo "DEBUG: ROCM_CXX_PATH=${ROCM_CXX_PATH}" && \
+    echo "DEBUG: ROCM_GPU_TARGETS=${ROCM_GPU_TARGETS}" && \
+    [ -n "${ROCM_HOME}" ] || { echo "ERROR: ROCM_HOME is empty"; exit 1; } && \
     [ -n "${ROCM_CMAKE_PATH}" ] || { echo "ERROR: ROCM_CMAKE_PATH is empty"; exit 1; } && \
     [ -n "${ROCM_BIN_PATH}" ] || { echo "ERROR: ROCM_BIN_PATH is empty"; exit 1; } && \
     { \
-        echo "export ROCM_PATH=${ROCM_PATH}"; \
+        echo "export ROCK_PYPI_URL=${ROCK_PYPI_URL}"; \
+        echo "export ROCK_INSTALL_PATH=${ROCK_INSTALL_PATH}"; \
+        echo "export ROCM_HOME=${ROCM_HOME}"; \
+        echo "export ROCM_VERSION=${ROCM_VERSION}"; \
         echo "export ROCM_CMAKE_PATH=${ROCM_CMAKE_PATH}"; \
         echo "export ROCM_BIN_PATH=${ROCM_BIN_PATH}"; \
-        echo "export PATH=\${ROCM_BIN_PATH}:\${PATH}"; \
+        echo "export ROCM_LLVM_PATH=${ROCM_LLVM_PATH}"; \
+        echo "export ROCM_CC_PATH=${ROCM_LLVM_PATH}/bin/clang"; \
+        echo "export ROCM_CXX_PATH=${ROCM_LLVM_PATH}/bin/clang++"; \
+        echo "export ROCM_GPU_TARGETS=${ROCM_GPU_TARGETS}"; \
+        echo "export PATH=\${ROCK_INSTALL_PATH}/bin:\${ROCM_BIN_PATH}:\${ROCM_LLVM_PATH}/bin:\${PATH}"; \
+        echo "export ROCM_HIP_PLATFORM=amd"; \
     } > /etc/rocm_env.sh && \
     cat /etc/rocm_env.sh
 
@@ -45,20 +76,18 @@ FROM rocm_base_image AS dgl_build_env
 
 ARG TORCH_VERSION="2.7.1+rocm7.9.0rc1"
 
-RUN source /etc/rocm_env.sh
-
 # Install build toolchain
-RUN yum -y install ninja-build clang gcc gcc-c++ libstdc++-devel \
-    &&yum clean all
+RUN yum -y install ninja-build gcc-c++ libstdc++-devel && \
+    yum clean all
 
 # Install clang-format-15
-RUN /opt/rocm/bin/pip install clang-format==15.*
+RUN ${ROCK_INSTALL_PATH}/bin/pip install clang-format==15.*
 
 # Install torch
-RUN /opt/rocm/bin/pip install --index-url ${ROCM_PYPI_URL} torch
+RUN ${ROCK_INSTALL_PATH}/bin/pip install --index-url ${ROCK_PYPI_URL} torch==${TORCH_VERSION}
 
 # Create script to print build environment details
-RUN { \
+RUN cat /etc/rocm_env.sh && source /etc/rocm_env.sh && { \
     echo '#!/usr/bin/env bash'; \
     echo 'set -e'; \
     echo ''; \
@@ -66,11 +95,9 @@ RUN { \
     echo 'echo ""'; \
     echo ''; \
     echo 'echo "Ninja version: $(ninja --version)"'; \
-    echo 'echo "GCC version: $(gcc --version | head -n1)"'; \
-    echo 'echo "g++ version: $(g++ --version | head -n1)"'; \
-    echo 'echo "clang version: $(clang --version | head -n1)"'; \
-    echo 'echo "clang++ version: $(clang++ --version | head -n1)"'; \
-    echo "echo \"PyTorch version: \$(/opt/rocm/bin/python -W ignore -c 'import torch; print(torch.__version__)' 2>/dev/null || echo 'Not installed')\""; \
+    echo 'echo "clang version: $(${ROCM_CC_PATH} --version | head -n1)"'; \
+    echo 'echo "clang++ version: $(${ROCM_CXX_PATH} --version | head -n1)"'; \
+    echo "echo \"PyTorch version: \$(${ROCK_INSTALL_PATH}/bin/python -W ignore -c 'import torch; print(torch.__version__)' 2>/dev/null || echo 'Not installed')\""; \
     echo ''; \
     echo 'echo ""'; \
     echo 'echo "=== C++ Standard Support ==="'; \
@@ -90,27 +117,57 @@ RUN { \
     echo '  esac'; \
     echo '}'; \
     echo ''; \
-    echo 'GCC_STD=$(g++ -dM -E -x c++ -std=c++17 $TMPFILE | grep __cplusplus | awk "{print \$3}" | sed "s/L$//" )'; \
-    echo 'echo "GCC C++ standard: $(convert_cpp_std $GCC_STD)"'; \
-    echo ''; \
-    echo 'CLANG_STD=$(clang++ -dM -E -x c++ -std=c++17 $TMPFILE | grep __cplusplus | awk "{print \$3}" | sed "s/L$//" )'; \
+    echo 'CLANG_STD=$(${ROCM_CXX_PATH} -dM -E -x c++ -std=c++17 $TMPFILE | grep __cplusplus | awk "{print \$3}" | sed "s/L$//" )'; \
     echo 'echo "Clang C++ standard: $(convert_cpp_std $CLANG_STD)"'; \
     echo ''; \
     echo 'rm -f $TMPFILE'; \
     echo ''; \
-    echo 'echo ""'; \
+    echo 'echo "====== ENVIRONMENT VARIABLES ======"'; \
+    echo 'echo ROCK_PYPI_URL: ${ROCK_PYPI_URL}'; \
+    echo 'echo ROCK_INSTALL_PATH: ${ROCK_INSTALL_PATH}'; \
+    echo 'echo ROCM_HOME: ${ROCM_HOME}'; \
+    echo 'echo ROCM_VERSION: ${ROCM_VERSION}'; \
+    echo 'echo ROCM_CMAKE_PATH: ${ROCM_CMAKE_PATH}'; \
+    echo 'echo ROCM_BIN_PATH: ${ROCM_BIN_PATH}'; \
+    echo 'echo ROCM_LLVM_PATH: ${ROCM_LLVM_PATH}'; \
+    echo 'echo ROCM_CC_PATH: ${ROCM_CC_PATH}'; \
+    echo 'echo ROCM_CXX_PATH: ${ROCM_CXX_PATH}'; \
+    echo 'echo ROCM_GPU_TARGETS: ${ROCM_GPU_TARGETS}'; \
+    echo 'echo PATH: ${PATH}'; \
+    echo 'echo ROCM_HIP_PLATFORM: ${ROCM_HIP_PLATFORM}'; \
     echo 'echo "==================================="'; \
     } > /print-dgl-build-env.sh && \
     chmod +x /print-dgl-build-env.sh
 
 # Stage 3: Copy DGL sources and build dynamic dependencies
-FROM dgl_build_env AS dgl_build_dyn_deps
-
-RUN source /etc/rocm_env.sh
-
-RUN /print-dgl-build-env.sh
+FROM dgl_build_env AS dgl_dyn_deps
 
 ENV DGL_SRC_DIR="/src/dgl"
+ENV DGL_BUILD_DIR="${DGL_SRC_DIR}/build"
+ENV DGL_ARTIFACTS_DIR="/artifacts"
 
 COPY . ${DGL_SRC_DIR}
+
+RUN source /etc/rocm_env.sh && \
+    /print-dgl-build-env.sh && \
+    mkdir -p /tmp/deps && \
+    cd /tmp/deps && \
+    bash ${DGL_SRC_DIR}/script/install_graphbolt_deps.sh && \
+    rm -rf /tmp/deps
+
+FROM dgl_dyn_deps AS dgl_rocm_build
+
+ARG MAX_JOBS=${MAX_JOBS:-$(nproc)}
+ENV MAX_JOBS=${MAX_JOBS}
+
+RUN source /etc/rocm_env.sh && \
+    /print-dgl-build-env.sh && \
+    cmake -B ${DGL_BUILD_DIR} -S ${DGL_SRC_DIR} \
+          -DGPU_TARGETS=${ROCM_GPU_TARGETS} \
+          -DCMAKE_HIP_PLATFORM=${ROCM_HIP_PLATFORM} \
+          -DCMAKE_HIP_COMPILER=${ROCM_CXX_PATH} \
+          -DCMAKE_HIP_COMPILER_ROCM_ROOT=${ROCM_HOME} \
+          -DCMAKE_HIP_ARCHITECTURES=${ROCM_GPU_TARGETS} \
+          -DCMAKE_INSTALL_PREFIX=${ROCM_HOME} && \
+    cmake --build ${DGL_BUILD_DIR} --parallel ${MAX_JOBS}
 
