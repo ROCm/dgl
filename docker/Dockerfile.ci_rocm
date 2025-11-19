@@ -155,19 +155,18 @@ RUN source /etc/rocm_env.sh && \
     bash ${DGL_SRC_DIR}/script/install_graphbolt_deps.sh && \
     rm -rf /tmp/deps
 
-FROM dgl_dyn_deps AS dgl_rocm_build
+# FROM dgl_dyn_deps AS dgl_rocm_build
 
-ARG MAX_JOBS=${MAX_JOBS:-$(nproc)}
-ENV MAX_JOBS=${MAX_JOBS}
+# ARG MAX_JOBS=$(nproc)
 
-RUN source /etc/rocm_env.sh && \
-    /print-dgl-build-env.sh && \
-    cmake -B ${DGL_BUILD_DIR} -S ${DGL_SRC_DIR} \
-          -DGPU_TARGETS=${ROCM_GPU_TARGETS} \
-          -DCMAKE_HIP_PLATFORM=${ROCM_HIP_PLATFORM} \
-          -DCMAKE_HIP_COMPILER=${ROCM_CXX_PATH} \
-          -DCMAKE_HIP_COMPILER_ROCM_ROOT=${ROCM_HOME} \
-          -DCMAKE_HIP_ARCHITECTURES=${ROCM_GPU_TARGETS} \
-          -DCMAKE_INSTALL_PREFIX=${ROCM_HOME} && \
-    cmake --build ${DGL_BUILD_DIR} --parallel ${MAX_JOBS}
+# RUN source /etc/rocm_env.sh && \
+#     /print-dgl-build-env.sh && \
+#     cmake -B ${DGL_BUILD_DIR} -S ${DGL_SRC_DIR} \
+#           -DGPU_TARGETS=${ROCM_GPU_TARGETS} \
+#           -DCMAKE_HIP_PLATFORM=${ROCM_HIP_PLATFORM} \
+#           -DCMAKE_HIP_COMPILER=${ROCM_CXX_PATH} \
+#           -DCMAKE_HIP_COMPILER_ROCM_ROOT=${ROCM_HOME} \
+#           -DCMAKE_HIP_ARCHITECTURES=${ROCM_GPU_TARGETS} \
+#           -DCMAKE_INSTALL_PREFIX=${ROCM_HOME} && \
+#     cmake --build ${DGL_BUILD_DIR} --parallel ${MAX_JOBS}
 

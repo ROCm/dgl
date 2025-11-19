@@ -1,5 +1,5 @@
 {
-    "version": 8,
+    "version": 7,
     "cmakeMinimumRequired": {
         "major": 3,
         "minor": 18,
@@ -10,20 +10,20 @@
       "name": "rocm",
       "description": "Build with ROCm",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
+      "binaryDir": "${env:DGL_BUILD_DIR}",
       "cacheVariables": {
         "BUILD_TYPE": "Release",
         "CMAKE_BUILD_TYPE": "Release",
         "USE_HIP": "ON",
-        "GPU_TARGETS": "gfx90a,gfx942",
-        "CMAKE_HIP_ARCHITECTURES": "gfx90a,gfx942",
-        "CMAKE_INSTALL_PREFIX": "/opt/rocm",
+        "GPU_TARGETS": "${env:ROCM_GPU_TARGETS}",
+        "CMAKE_HIP_ARCHITECTURES": "${env:ROCM_GPU_TARGETS}",
+        "CMAKE_INSTALL_PREFIX": "${env:ROCM_HOME}",
         "BUILD_CPP_TEST": "ON",
         "CMAKE_C_FLAGS": "-fdiagnostics-color=always",
         "CMAKE_CXX_FLAGS": "-fdiagnostics-color=always",
         "CMAKE_HIP_FLAGS": "-ftime-trace -fdiagnostics-color=always",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "CMAKE_PREFIX_PATH": "/opt/rocm/lib/cmake",
+        "CMAKE_PREFIX_PATH": "${env:ROCM_CMAKE_PATH}",
         "CMAKE_COLOR_DIAGNOSTICS": "ON"
       }
     },
@@ -32,8 +32,8 @@
       "description": "Build with ROCm and LLVM for host compiler",
       "inherits": ["rocm"],
       "cacheVariables": {
-        "CMAKE_C_COMPILER":"clang",
-        "CMAKE_CXX_COMPILER":"clang++",
+        "CMAKE_C_COMPILER":"${env:ROCM_CC_PATH}",
+        "CMAKE_CXX_COMPILER":"${env:ROCM_CXX_PATH}",
         "CMAKE_C_FLAGS": "-ftime-trace",
         "CMAKE_CXX_FLAGS": "-ftime-trace"
       }
