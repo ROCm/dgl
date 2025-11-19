@@ -20,6 +20,7 @@ def is_cuda_available():
     """Check whether CUDA is available."""
     pass
 
+
 def get_rocm_version():
     """Get the rocm version number."""
     pass

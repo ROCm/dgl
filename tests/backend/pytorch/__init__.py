@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import re
+
 import torch as th
 
 
@@ -102,6 +103,7 @@ def abs(a):
 
 def seed(a):
     return th.manual_seed(a)
+
 
 def get_rocm_version():
     v = th.version.hip

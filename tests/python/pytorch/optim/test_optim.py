@@ -282,7 +282,9 @@ def start_torch_adam_worker(
             lr=0.01,
         )
     else:
-        torch_adam = th.optim.SparseAdam(list(torch_emb.module.parameters()), lr=0.01)
+        torch_adam = th.optim.SparseAdam(
+            list(torch_emb.module.parameters()), lr=0.01
+        )
 
     th.manual_seed(rank)
     if zero_comm:
@@ -411,7 +413,9 @@ def test_multiprocess_sparse_adam(num_workers, backend, zero_comm):
 
 
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")
-@unittest.skipIf(F.ctx().type == "cpu", reason="cuda tensor is not supported for cpu")
+@unittest.skipIf(
+    F.ctx().type == "cpu", reason="cuda tensor is not supported for cpu"
+)
 @pytest.mark.parametrize("num_workers", [2, 4, 8])
 def test_multiprocess_sparse_adam_cuda_tensor(num_workers):
     if F.ctx().type == "cpu":
@@ -547,7 +551,9 @@ def test_multiprocess_sparse_adam_zero_step(num_workers, backend):
 
 
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")
-@unittest.skipIf(F.ctx().type == "cpu", reason="cuda tensor is not supported for cpu")
+@unittest.skipIf(
+    F.ctx().type == "cpu", reason="cuda tensor is not supported for cpu"
+)
 @pytest.mark.parametrize("num_workers", [2, 4, 8])
 def test_multiprocess_sparse_adam_zero_step_cuda_tensor(num_workers):
     if F.ctx().type == "cuda" and th.cuda.device_count() < num_workers:
