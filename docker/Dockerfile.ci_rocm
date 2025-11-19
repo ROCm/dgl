@@ -42,6 +42,8 @@ RUN set -e && \
     ROCM_CC_PATH=${ROCM_LLVM_PATH}/bin/clang && \
     ROCM_CXX_PATH=${ROCM_LLVM_PATH}/bin/clang++ && \
     ROCM_GPU_TARGETS=$(/opt/rocm/bin/rocm-sdk targets) && \
+    ROCM_HIP_PLATFORM=amd && \
+    ROCK_PYTHON_INTERPRETER="$ROCK_INSTALL_PATH/bin/python" && \
     echo "DEBUG: ROCK_PYPI_URL=${ROCK_PYPI_URL}" && \
     echo "DEBUG: ROCK_INSTALL_PATH=${ROCK_INSTALL_PATH}" && \
     echo "DEBUG: ROCM_HOME=${ROCM_HOME}" && \
@@ -52,6 +54,7 @@ RUN set -e && \
     echo "DEBUG: ROCM_CC_PATH=${ROCM_CC_PATH}" && \
     echo "DEBUG: ROCM_CXX_PATH=${ROCM_CXX_PATH}" && \
     echo "DEBUG: ROCM_GPU_TARGETS=${ROCM_GPU_TARGETS}" && \
+    echo "DEBUG: ROCK_PYTHON_INTERPRETER=${ROCK_PYTHON_INTERPRETER}" && \
     [ -n "${ROCM_HOME}" ] || { echo "ERROR: ROCM_HOME is empty"; exit 1; } && \
     [ -n "${ROCM_CMAKE_PATH}" ] || { echo "ERROR: ROCM_CMAKE_PATH is empty"; exit 1; } && \
     [ -n "${ROCM_BIN_PATH}" ] || { echo "ERROR: ROCM_BIN_PATH is empty"; exit 1; } && \
@@ -67,7 +70,9 @@ RUN set -e && \
         echo "export ROCM_CXX_PATH=${ROCM_LLVM_PATH}/bin/clang++"; \
         echo "export ROCM_GPU_TARGETS=${ROCM_GPU_TARGETS}"; \
         echo "export PATH=\${ROCK_INSTALL_PATH}/bin:\${ROCM_BIN_PATH}:\${ROCM_LLVM_PATH}/bin:\${PATH}"; \
-        echo "export ROCM_HIP_PLATFORM=amd"; \
+        echo "export ROCM_HIP_PLATFORM=${ROCM_HIP_PLATFORM}"; \
+        echo "export HIP_PLATFORM=${ROCM_HIP_PLATFORM}"; \
+        echo "export ROCK_PYTHON_INTERPRETER=${ROCK_PYTHON_INTERPRETER}"; \
     } > /etc/rocm_env.sh && \
     cat /etc/rocm_env.sh
 
@@ -77,8 +82,12 @@ FROM rocm_base_image AS dgl_build_env
 ARG TORCH_VERSION="2.7.1+rocm7.9.0rc1"
 
 # Install build toolchain
-RUN yum -y install ninja-build gcc-c++ libstdc++-devel && \
+RUN yum -y install ninja-build gcc-c++ libstdc++-devel wget && \
     yum clean all
+
+# DGL Build requires CMake 3.28.3 specifically.
+RUN wget -qO- https://cmake.org/files/v3.28/cmake-3.28.3-linux-x86_64.tar.gz \
+| tar --strip-components=1 -xz -C /usr/local
 
 # Install clang-format-15
 RUN ${ROCK_INSTALL_PATH}/bin/pip install clang-format==15.*
@@ -94,6 +103,7 @@ RUN cat /etc/rocm_env.sh && source /etc/rocm_env.sh && { \
     echo 'echo "=== DGL Build Environment Details ==="'; \
     echo 'echo ""'; \
     echo ''; \
+    echo 'echo "CMake Version: $(cmake --version | head -n1 | awk "{print \$3}")"'; \
     echo 'echo "Ninja version: $(ninja --version)"'; \
     echo 'echo "clang version: $(${ROCM_CC_PATH} --version | head -n1)"'; \
     echo 'echo "clang++ version: $(${ROCM_CXX_PATH} --version | head -n1)"'; \
@@ -125,6 +135,7 @@ RUN cat /etc/rocm_env.sh && source /etc/rocm_env.sh && { \
     echo 'echo "====== ENVIRONMENT VARIABLES ======"'; \
     echo 'echo ROCK_PYPI_URL: ${ROCK_PYPI_URL}'; \
     echo 'echo ROCK_INSTALL_PATH: ${ROCK_INSTALL_PATH}'; \
+    echo 'echo ROCK_PYTHON_INTERPRETER: ${ROCK_PYTHON_INTERPRETER}'; \
     echo 'echo ROCM_HOME: ${ROCM_HOME}'; \
     echo 'echo ROCM_VERSION: ${ROCM_VERSION}'; \
     echo 'echo ROCM_CMAKE_PATH: ${ROCM_CMAKE_PATH}'; \
@@ -135,6 +146,7 @@ RUN cat /etc/rocm_env.sh && source /etc/rocm_env.sh && { \
     echo 'echo ROCM_GPU_TARGETS: ${ROCM_GPU_TARGETS}'; \
     echo 'echo PATH: ${PATH}'; \
     echo 'echo ROCM_HIP_PLATFORM: ${ROCM_HIP_PLATFORM}'; \
+    echo 'echo HIP_PLATFORM: ${HIP_PLATFORM}'; \
     echo 'echo "==================================="'; \
     } > /print-dgl-build-env.sh && \
     chmod +x /print-dgl-build-env.sh
@@ -155,18 +167,14 @@ RUN source /etc/rocm_env.sh && \
     bash ${DGL_SRC_DIR}/script/install_graphbolt_deps.sh && \
     rm -rf /tmp/deps
 
-# FROM dgl_dyn_deps AS dgl_rocm_build
+FROM dgl_dyn_deps AS dgl_rocm_build
 
-# ARG MAX_JOBS=$(nproc)
+ARG MAX_JOBS=4
 
-# RUN source /etc/rocm_env.sh && \
-#     /print-dgl-build-env.sh && \
-#     cmake -B ${DGL_BUILD_DIR} -S ${DGL_SRC_DIR} \
-#           -DGPU_TARGETS=${ROCM_GPU_TARGETS} \
-#           -DCMAKE_HIP_PLATFORM=${ROCM_HIP_PLATFORM} \
-#           -DCMAKE_HIP_COMPILER=${ROCM_CXX_PATH} \
-#           -DCMAKE_HIP_COMPILER_ROCM_ROOT=${ROCM_HOME} \
-#           -DCMAKE_HIP_ARCHITECTURES=${ROCM_GPU_TARGETS} \
-#           -DCMAKE_INSTALL_PREFIX=${ROCM_HOME} && \
-#     cmake --build ${DGL_BUILD_DIR} --parallel ${MAX_JOBS}
+RUN source /etc/rocm_env.sh && \
+    /print-dgl-build-env.sh && \
+    cd ${DGL_SRC_DIR} && \
+    cmake --preset rocm && \
+    MAX_JOBS=${MAX_JOBS:-$(nproc)} && \
+    cmake --build ${DGL_BUILD_DIR} --parallel ${MAX_JOBS}
 
