@@ -64,6 +64,7 @@ def start_sparse_worker(rank, world_size, test, args):
     th.distributed.barrier()
     th.distributed.destroy_process_group()
 
+
 @unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")
 @pytest.mark.parametrize("num_workers", [1, 2, 3])
@@ -88,6 +89,7 @@ def test_multiprocess_sparse_emb_get_set(num_workers):
         p.join()
     for p in worker_list:
         assert p.exitcode == 0
+
 
 @unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")

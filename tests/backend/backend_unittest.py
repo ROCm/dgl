@@ -21,6 +21,11 @@ def is_cuda_available():
     pass
 
 
+def get_rocm_version():
+    """Get the rocm version number."""
+    pass
+
+
 ###############################################################################
 # Tensor functions on feature data
 # --------------------------------

@@ -10,7 +10,6 @@ from dgl.nn import NodeEmbedding
 from dgl.optim import SparseAdagrad, SparseAdam
 
 
-@unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")
 @pytest.mark.parametrize("emb_dim", [1, 4, 101, 1024])
 def test_sparse_adam(emb_dim):
@@ -50,7 +49,6 @@ def test_sparse_adam(emb_dim):
     # DGL sparseAdam use a per embedding step
 
 
-@unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")
 @pytest.mark.parametrize("use_uva", [False, True, None])
 @pytest.mark.parametrize("emb_dim", [1, 4, 101, 1024])
@@ -284,7 +282,9 @@ def start_torch_adam_worker(
             lr=0.01,
         )
     else:
-        torch_adam = th.optim.SparseAdam(list(torch_emb.module.parameters()), lr=0.01)
+        torch_adam = th.optim.SparseAdam(
+            list(torch_emb.module.parameters()), lr=0.01
+        )
 
     th.manual_seed(rank)
     if zero_comm:
@@ -413,7 +413,9 @@ def test_multiprocess_sparse_adam(num_workers, backend, zero_comm):
 
 
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")
-@unittest.skipIf(F.ctx().type == "cpu", reason="cuda tensor is not supported for cpu")
+@unittest.skipIf(
+    F.ctx().type == "cpu", reason="cuda tensor is not supported for cpu"
+)
 @pytest.mark.parametrize("num_workers", [2, 4, 8])
 def test_multiprocess_sparse_adam_cuda_tensor(num_workers):
     if F.ctx().type == "cpu":
@@ -549,7 +551,9 @@ def test_multiprocess_sparse_adam_zero_step(num_workers, backend):
 
 
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")
-@unittest.skipIf(F.ctx().type == "cpu", reason="cuda tensor is not supported for cpu")
+@unittest.skipIf(
+    F.ctx().type == "cpu", reason="cuda tensor is not supported for cpu"
+)
 @pytest.mark.parametrize("num_workers", [2, 4, 8])
 def test_multiprocess_sparse_adam_zero_step_cuda_tensor(num_workers):
     if F.ctx().type == "cuda" and th.cuda.device_count() < num_workers:
@@ -643,7 +647,6 @@ def start_sparse_adam_state_dict_worker(
     th.distributed.barrier()
 
 
-@unittest.skipIf(F.is_hip(), reason="Not implemented in ROCm")
 @unittest.skipIf(os.name == "nt", reason="Do not support windows yet")
 @unittest.skipIf(F.ctx().type == "cpu", reason="gpu only test")
 @pytest.mark.parametrize("num_workers", [1, 2, 4, 8])
