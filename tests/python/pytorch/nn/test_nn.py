@@ -2734,7 +2734,7 @@ def test_conv_with_zero_nodes_bugfix_7894(residual):
                 16, 2, num_heads=2, residual=residual
             ),
         },
-        aggregate="sum"
+        aggregate="sum",
     )
     out = conv(g, node_features)
     assert out["item"].shape == (10, 2, 2)
@@ -2750,8 +2750,8 @@ def test_conv_with_zero_nodes_bugfix_7894(residual):
             ("user", "likes", "tag"): nn.GATv2Conv(
                 16, 2, num_heads=2, residual=residual
             ),
-        }, 
-        aggregate="sum"
+        },
+        aggregate="sum",
     )
     out_v2 = conv_v2(g, node_features)
     assert out_v2["item"].shape == (10, 2, 2)
@@ -2768,7 +2768,7 @@ def test_conv_with_zero_nodes_bugfix_7894(residual):
                 16, 16, 2, num_heads=2, residual=residual
             ),
         },
-        aggregate="sum"
+        aggregate="sum",
     )
     mod_kwargs = {
         "buys": {"edge_feat": edge_features[("user", "buys", "item")]},
