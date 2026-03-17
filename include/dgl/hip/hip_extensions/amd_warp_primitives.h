@@ -11,6 +11,8 @@
 #ifdef __AMDGCN_WAVEFRONT_SIZE
 #undef WAVEFRONT_SIZE
 #define WAVEFRONT_SIZE __AMDGCN_WAVEFRONT_SIZE
+#elif defined(__AMDGCN__)
+#define WAVEFRONT_SIZE 64
 #endif
 
 /* this header file provides _*_sync functions, which is a hack only,

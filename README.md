@@ -35,27 +35,64 @@ docker run \
 - PyTorch >= 2.6.0
 
 ```bash
-# get the code
+# setup your environment to make ROCm and PyTorch visible
+python3 -m ven dgl_venv
+source dgl_venv/bin/activate
+pip3 install Cython==3.0.12 scipy pandas tqdm pytest pydantic
+export AMDGPU_TARGETS=gfx942 // change this as needed 
+export PYTORCH_ROCM_ARCH=$AMDGPU_TARGETS
+export ROCM_PATH=/opt/rocm // change this as needed 
+export PATH=$ROCM_PATH/bin:$PATH
+
+# note, the above might be set with:
+module load rocm pytorch
+# on a system where modules are used.
+
+# install dependencies
+export LIBHIPCXX_BRANCH=therock-7.11 // change as needed 
+git clone -b $LIBHIPCXX_BRANCH https://github.com/ROCm/libhipcxx.git
+
+cd libhipcxx && mkdir build && cd build
+
+export LIBHIPCXX_PATH=$HOME/libhipcxx_install // set to user desired path
+
+cmake -DCMAKE_PREFIX_PATH=$LIBHIPCXX_PATH -DCMAKE_CXX_COMPILER=`which amdclang++` -DCMAKE_C_COMPILER=`which amdclang` -DCMAKE_HIP_ARCHITECTURES=$AMDGPU_TARGETS -DGPU_TARGETS=$AMDGPU_TARGETS -DLIBCUDACXX_ENABLE_LIBCUDACXX_TESTS=OFF  -DUSE_LIBXSMM=OFF ..
+
+cd ../..
+
+export libhipcxx_DIR=$LIBHIPCXX_PATH
+
+export HIPCOLL_BRANCH=release/rocmds-25.10 // change as needed
+git clone -b $HIPCOLL_BRANCH https://github.com/ROCm/hipCollections.git
+
+export HIPCOLL_PATH=$HOME/hipcoll_install // set to user defined path
+
+cd hipColections && mkdir build && cd build
+
+cmake  -DCMAKE_INSTALL_PREFIX=$HIPCOLL_PATH -DINSTALL_CUCO=ON -DBUILD_TESTS=OFF -DBUILD_BENCHMARKS=OFF -DBUILD_EXAMPLES=OFF  -DCMAKE_CXX_COMPILER=`which amdclang++` ..
+
+export hipCCL_DIR=$HIPCOLL_PATH
+
+cd ../..
+
 git clone --recurse-submodules https://github.com/ROCm/dgl
-cd dgl
 
-# install graphbolt dependencies
-mkdir -p deps
-cd deps
-bash ../script/install_graphbolt_deps.sh
-cd ..
+export DGL_PATH=$HOME/dgl_install
 
-# build dgl
-cmake --preset rocm <OPTIONAL_CMAKE_ARGS>
-cmake --build build
+cd dgl && mkdir build && cd build
 
-# install the python bindings (should be done inside a virtual env)
-cd python
-python -m pip install -e .
-python -m build --wheel
+cmake  -DCMAKE_INSTALL_PREFIX=$DGL_PATH -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DUSE_HIP=ON -DCMAKE_HIP_ARCHITECTURES=$AMDGPU_TARGETS -DGPU_TARGETS=gfx942   -DCMAKE_CXX_COMPILER=`which amdclang++` -DCMAKE_C_COMPILER=`which amdclang` -DCMAKE_PREFIX_PATH=${hipCCL_DIR}/lib/cmake/cuco ..
+
+cd ../python
+
+pip3 install . --target=$DGL_PATH --no-deps --no-build-isolation
+export PYTHONPATH=$DGL_PATH:$PYTHONPATH
+
+cd ../..
 
 # Check installation with python tests
 bash tests/scripts/task_unit_test_rocm.sh pytorch gpu
+deactivate
 ```
 
 <p align="center">
@@ -67,6 +104,14 @@ bash tests/scripts/task_unit_test_rocm.sh pytorch gpu
 [![Build Status](https://ci.dgl.ai/buildStatus/icon?job=DGL/master)](https://ci.dgl.ai/job/DGL/job/master/)
 [![Benchmark by ASV](http://img.shields.io/badge/benchmarked%20by-asv-green.svg?style=flat)](https://asv.dgl.ai/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
+[![Twitter](https://img.shields.io/twitter/follow/DGLGraph?style=social)](https://twitter.com/GraphDeep)
+
+[Website](https://www.dgl.ai) | [A Blitz Introduction to DGL](https://docs.dgl.ai/tutorials/blitz/index.html) | Documentation ([Latest](https://www.dgl.ai/dgl_docs/) | [Official Examples](examples/README.md) | [Discussion Forum](https://discuss.dgl.ai) | [Slack Channel](https://join.slack.com/t/deep-graph-library/shared_invite/zt-eb4ict1g-xcg3PhZAFAB8p6dtKuP6xQ)
+
+[![Twitter](https://img.shields.io/twitter/follow/DGLGraph?style=social)](https://twitter.com/GraphDeep)
+
+[Website](https://www.dgl.ai) | [A Blitz Introduction to DGL](https://docs.dgl.ai/tutorials/blitz/index.html) | Documentation ([Latest](https://www.dgl.ai/dgl_docs/) | [Official Examples](examples/README.md) | [Discussion Forum](https://discuss.dgl.ai) | [Slack Channel](https://join.slack.com/t/deep-graph-library/shared_invite/zt-eb4ict1g-xcg3PhZAFAB8p6dtKuP6xQ)
+
 [![Twitter](https://img.shields.io/twitter/follow/DGLGraph?style=social)](https://twitter.com/GraphDeep)
 
 [Website](https://www.dgl.ai) | [A Blitz Introduction to DGL](https://docs.dgl.ai/tutorials/blitz/index.html) | Documentation ([Latest](https://www.dgl.ai/dgl_docs/) | [Official Examples](examples/README.md) | [Discussion Forum](https://discuss.dgl.ai) | [Slack Channel](https://join.slack.com/t/deep-graph-library/shared_invite/zt-eb4ict1g-xcg3PhZAFAB8p6dtKuP6xQ)
@@ -378,11 +423,3 @@ If you use DGL in a scientific publication, we would appreciate citations to the
     journal={arXiv preprint arXiv:1909.01315}
 }
 ```
-
-## The Team
-
-DGL is developed and maintained by [NYU, NYU Shanghai, AWS Shanghai AI Lab, and AWS MXNet Science Team](https://www.dgl.ai/pages/about.html).
-
-## License
-
-DGL uses Apache License 2.0.

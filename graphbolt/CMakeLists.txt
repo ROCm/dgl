@@ -205,8 +205,12 @@ if(USE_CUDA OR USE_HIP)
   set_target_properties(${LIB_GRAPHBOLT_CUDA_NAME} PROPERTIES LINKER_LANGUAGE HIP)
   endif()
 
-  # Enables libcudacxx/libhipcxx for gpu_cache. 
-  target_compile_definitions(${LIB_GRAPHBOLT_CUDA_NAME} PRIVATE LIBCUDACXX_VERSION)
+  # Enables libcudacxx/libhipcxx for gpu_cache.
+  # On HIP, cuda::binary_semaphore is unsupported, so we skip the libcudacxx
+  # code paths and use the fallback (plain int mutex, raw pointers).
+  if(NOT USE_HIP)
+    target_compile_definitions(${LIB_GRAPHBOLT_CUDA_NAME} PRIVATE LIBCUDACXX_VERSION)
+  endif()
   include_directories(AFTER "../third_party/HugeCTR/gpu_cache/include")
   message(STATUS "Build graphbolt extension with HugeCTR GPU embedding cache.")
 

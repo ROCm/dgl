@@ -206,6 +206,11 @@ if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
   set(USE_LIBXSMM OFF)
 endif()
 
+if(USE_HIP AND USE_LIBXSMM)
+  message(STATUS "Disabling LIBXSMM for HIP builds (incompatible with lld linker).")
+  set(USE_LIBXSMM OFF)
+endif()
+
 # Source file lists
 file(GLOB DGL_SRC
   src/*.cc

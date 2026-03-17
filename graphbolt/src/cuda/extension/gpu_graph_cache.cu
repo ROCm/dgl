@@ -23,11 +23,7 @@
 
 #include <cstddef>
 #ifdef GRAPHBOLT_USE_HIP
-#include <cuco/cuda_stream_ref.hpp>
 #include <hipcub/hipcub.hpp>
-namespace cuda {
-using stream_ref = cuco::cuda_stream_ref;
-}
 #define C10_CUDA_KERNEL_LAUNCH_CHECK C10_HIP_KERNEL_LAUNCH_CHECK
 #else
 #include <cub/cub.cuh>
