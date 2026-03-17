@@ -19,7 +19,7 @@ cmake -B build \
 cmake --build build --target install
 cd ${DEPS_DIR}
 
-# TODO this is an unacceptable way to do this,
+# TODO (#21) this is an unacceptable way to do this,
 # see https://github.com/ROCm/libhipcxx/issues/10 for more details
 # This was implicitly not allowed in previous releases we were using, 
 # but with v2.7.0 they are explicitly not allowed.
@@ -32,7 +32,7 @@ sed -i '/#error semaphore is not supported on AMD hardware and should not be inc
 sed -i '/#error semaphore is not supported on AMD hardware and should not be included/d' ${INSTALL_PREFIX}/include/rapids/libhipcxx/cuda/std/semaphore
 sed -i '/#error semaphore is not supported on AMD hardware and should not be included/d' ${INSTALL_PREFIX}/include/rapids/libhipcxx/hip/std/semaphore
 
-# TODO remove this once the patches are merged
+# TODO (#22) remove this once the patches are merged
 # the patches for this were merged in https://github.com/ROCm/rocm-libraries/pull/1883
 # but may take more time to be released.
 
