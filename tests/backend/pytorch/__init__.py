@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import re
+
 import torch as th
 
 
@@ -101,3 +103,15 @@ def abs(a):
 
 def seed(a):
     return th.manual_seed(a)
+
+
+def get_rocm_version():
+    v = th.version.hip
+    if v:
+        match = re.match(r"(\d+\.\d+)", v)
+        if match:
+            return float(match.group(1))
+    match = re.search(r"\+rocm(\d+\.\d+)", th.__version__)
+    if match:
+        return float(match.group(1))
+    return 0.0
