@@ -38,7 +38,7 @@ docker run \
 # setup your environment to make ROCm and PyTorch visible
 python3 -m ven dgl_venv
 source dgl_venv/bin/activate
-pip3 install Cython==3.0.12 scipy pandas tqdm pytest pydantic
+pip3 install cython scipy pandas tqdm pytest pydantic
 export AMDGPU_TARGETS=gfx942 // change this as needed 
 export PYTORCH_ROCM_ARCH=$AMDGPU_TARGETS
 export ROCM_PATH=/opt/rocm // change this as needed 
