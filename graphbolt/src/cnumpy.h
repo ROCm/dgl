@@ -67,6 +67,7 @@ class counting_semaphore_impl {
     count_ += n;
     for (int i = 0; i < n; ++i) cv_.notify_one();
   }
+
  private:
   std::mutex mutex_;
   std::condition_variable cv_;

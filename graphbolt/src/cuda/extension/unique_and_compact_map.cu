@@ -205,8 +205,8 @@ UniqueAndCompactBatchedHashMapBased(
         cub::ArgIndexInputIterator index_it(indexes.data_ptr<int32_t>());
         auto input_it = thrust::make_transform_iterator(
             index_it,
-            ::cuda::proclaim_return_type
-            <::cuda::std::tuple<int64_t*, index_t, int32_t, bool>>(
+            ::cuda::proclaim_return_type<
+                ::cuda::std::tuple<int64_t*, index_t, int32_t, bool>>(
                 [=, map = map.ref(cuco::find)] __device__(auto it)
                     -> ::cuda::std::tuple<int64_t*, index_t, int32_t, bool> {
                   const auto i = it.key;
@@ -239,8 +239,7 @@ UniqueAndCompactBatchedHashMapBased(
         auto unique_ids_offsets_dev_ptr =
             unique_ids_offsets_dev.data_ptr<int64_t>();
         auto output_it = thrust::make_tabulate_output_iterator(
-            ::cuda::proclaim_return_type
-            <void>(
+            ::cuda::proclaim_return_type<void>(
                 [=, unique_ids_ptr = unique_ids.data_ptr<index_t>(),
                  part_ids_ptr =
                      part_ids ? part_ids->data_ptr<cuda::part_t>() : nullptr,
@@ -264,8 +263,7 @@ UniqueAndCompactBatchedHashMapBased(
             DeviceSelect::If, input_it, output_it,
             unique_ids_offsets_dev_ptr + num_batches,
             offsets_ptr[2 * num_batches],
-            ::cuda::proclaim_return_type
-            <bool>([] __device__(const auto& t) {
+            ::cuda::proclaim_return_type<bool>([] __device__(const auto& t) {
               return ::cuda::std::get<3>(t);
             }));
         auto unique_ids_offsets = torch::empty(
