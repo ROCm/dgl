@@ -23,7 +23,7 @@
         "CMAKE_CXX_FLAGS": "-fdiagnostics-color=always",
         "CMAKE_HIP_FLAGS": "-ftime-trace -fdiagnostics-color=always",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "CMAKE_PREFIX_PATH": "/opt/rocm/lib/cmake",
+        "CMAKE_PREFIX_PATH": "/opt/rocm/lib/cmake:/opt/rocm/lib/rapids/cmake",
         "CMAKE_COLOR_DIAGNOSTICS": "ON"
       }
     },

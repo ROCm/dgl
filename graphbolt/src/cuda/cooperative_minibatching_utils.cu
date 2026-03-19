@@ -54,12 +54,7 @@ torch::Tensor RankAssignment(
         THRUST_CALL(
             transform, nodes_ptr, nodes_ptr + nodes.numel(), part_ids_ptr,
 
-#ifdef GRAPHBOLT_USE_HIP
-            ::proclaim_return_type
-#else
-            ::cuda::proclaim_return_type
-#endif
-            <part_t>(
+            ::cuda::proclaim_return_type<part_t>(
                 [rank = static_cast<uint32_t>(rank),
                  world_size = static_cast<uint32_t>(
                      world_size)] __device__(index_t id) -> part_t {

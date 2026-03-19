@@ -23,11 +23,7 @@
 
 #include <cstddef>
 #ifdef GRAPHBOLT_USE_HIP
-#include <cuco/cuda_stream_ref.hpp>
 #include <hipcub/hipcub.hpp>
-namespace cuda {
-using stream_ref = cuco::cuda_stream_ref;
-}
 #define C10_CUDA_KERNEL_LAUNCH_CHECK C10_HIP_KERNEL_LAUNCH_CHECK
 #else
 #include <cub/cub.cuh>
@@ -510,12 +506,10 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> GpuGraphCache::Replace(
               }
               if (edge_id_offsets) {
                 // Append the edge ids as the last element of the output.
-                output_edge_tensors.push_back(
-                    ops::IndptrEdgeIdsImpl(
-                        output_indptr, output_indptr.scalar_type(),
-                        *edge_id_offsets,
-                        static_cast<int64_t>(
-                            static_cast<indptr_t>(output_size))));
+                output_edge_tensors.push_back(ops::IndptrEdgeIdsImpl(
+                    output_indptr, output_indptr.scalar_type(),
+                    *edge_id_offsets,
+                    static_cast<int64_t>(static_cast<indptr_t>(output_size))));
               }
 
               {
