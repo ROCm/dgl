@@ -24,7 +24,9 @@
 #include "gpu_cache_api.hpp"
 #ifdef LIBCUDACXX_VERSION
 #include <cuda/atomic>
+#ifndef DGL_USE_HIP
 #include <cuda/semaphore>
+#endif
 #endif
 
 #define SET_ASSOCIATIVITY 2
@@ -94,7 +96,26 @@ class gpu_cache : public gpu_cache_api<key_type> {
   using slabset = slab_set<set_associativity, key_type, warp_size>;
 #ifdef LIBCUDACXX_VERSION
   using atomic_ref_counter_type = cuda::atomic<ref_counter_type, cuda::thread_scope_device>;
+#ifdef DGL_USE_HIP
+  // cuda::binary_semaphore is not supported on HIP. Provide a device-side
+  // spinlock with the same acquire()/release() interface so that the
+  // LIBCUDACXX_VERSION kernel code compiles unchanged.
+  struct mutex {
+    int flag_;
+    __host__ __device__ explicit mutex(int initial = 1) : flag_(initial) {}
+    __device__ void acquire() {
+      while (atomicCAS(&flag_, 1, 0) == 0)
+        ;
+      __threadfence();
+    }
+    __device__ void release() {
+      __threadfence();
+      atomicExch(&flag_, 1);
+    }
+  };
+#else
   using mutex = cuda::binary_semaphore<cuda::thread_scope_device>;
+#endif
 #endif
 
  private:

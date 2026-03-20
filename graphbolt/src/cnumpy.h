@@ -17,7 +17,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#ifdef __HIP_PLATFORM_AMD__
+#ifdef __HIPCC__
 #include <condition_variable>
 #else
 #include <cuda/std/semaphore>
@@ -51,7 +51,7 @@ struct io_uring_queue_destroyer {
  * @brief Disk Numpy Fetecher class.
  */
 
-#ifdef __HIP_PLATFORM_AMD__
+#ifdef __HIPCC__
 template <int MaxCount>
 class counting_semaphore_impl {
  public:
@@ -76,7 +76,7 @@ class counting_semaphore_impl {
 #endif
 
 class OnDiskNpyArray : public torch::CustomClassHolder {
-#ifdef __HIP_PLATFORM_AMD__
+#ifdef __HIPCC__
   using counting_semaphore_t = counting_semaphore_impl<1024>;
 #else
   using counting_semaphore_t = ::cuda::std::counting_semaphore<1024>;
