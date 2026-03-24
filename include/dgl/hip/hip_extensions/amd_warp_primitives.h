@@ -11,6 +11,8 @@
 #ifdef __AMDGCN_WAVEFRONT_SIZE
 #undef WAVEFRONT_SIZE
 #define WAVEFRONT_SIZE __AMDGCN_WAVEFRONT_SIZE
+#elif defined(__AMDGCN__)
+#define WAVEFRONT_SIZE 64
 #endif
 
 /* this header file provides _*_sync functions, which is a hack only,
@@ -83,7 +85,7 @@ __device__ inline void __sync_active_threads() {
   __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "wavefront");
 }
 
-#if HIP_VERSION_MAJOR < 7 
+#if HIP_VERSION_MAJOR < 7
 __device__ inline void __syncwarp() {
   /* sync/barrier all threads in a warp */
   __builtin_amdgcn_fence(__ATOMIC_RELEASE, "wavefront");

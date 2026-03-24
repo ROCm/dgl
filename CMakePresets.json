@@ -18,6 +18,7 @@
         "GPU_TARGETS": "gfx90a,gfx942",
         "CMAKE_HIP_ARCHITECTURES": "gfx90a,gfx942",
         "CMAKE_INSTALL_PREFIX": "/opt/rocm",
+        "USE_LIBXSMM": "OFF",
         "BUILD_CPP_TEST": "ON",
         "CMAKE_C_FLAGS": "-fdiagnostics-color=always",
         "CMAKE_CXX_FLAGS": "-fdiagnostics-color=always",
