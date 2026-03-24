@@ -76,14 +76,6 @@ cd ${DEPS_DIR}
 # This was implicitly not allowed in previous releases we were using, 
 # but with v2.7.0 they are explicitly not allowed.
 
-# We only use semaphores for a counter of IO operations in graphbolt, 
-# that only runs on the host (not on the device) so we should be "safe"
-# to use this for now.
-run sed -i '/#error semaphore is not supported on AMD hardware and should not be included/d' ${INSTALL_PREFIX}/include/rapids/libhipcxx/cuda/semaphore
-run sed -i '/#error semaphore is not supported on AMD hardware and should not be included/d' ${INSTALL_PREFIX}/include/rapids/libhipcxx/hip/semaphore
-run sed -i '/#error semaphore is not supported on AMD hardware and should not be included/d' ${INSTALL_PREFIX}/include/rapids/libhipcxx/cuda/std/semaphore
-run sed -i '/#error semaphore is not supported on AMD hardware and should not be included/d' ${INSTALL_PREFIX}/include/rapids/libhipcxx/hip/std/semaphore
-
 # TODO (#22) remove this once the patches are merged
 # the patches for this were merged in https://github.com/ROCm/rocm-libraries/pull/1883
 # but may take more time to be released.

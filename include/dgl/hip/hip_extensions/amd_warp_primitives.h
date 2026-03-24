@@ -60,10 +60,11 @@ __device__ inline int __thread_rank(lane_mask mask) {
 }
 
 __device__ inline unsigned int __mask_size(lane_mask mask) {
-  if (WAVEFRONT_SIZE == 64)
-    return __popcll(mask);
-  else
-    return __popc(mask);
+#if WAVEFRONT_SIZE == 64
+  return __popcll(mask);
+#else
+  return __popc(mask);
+#endif
 }
 
 __device__ inline int __thread_rank_to_lane_id(lane_mask mask, int i) {
@@ -295,8 +296,11 @@ __device__ inline lane_mask __match_any_sync(lane_mask mask, T value) {
   bmask = __branchmask();
 
   while (1) {
-    int i = (WAVEFRONT_SIZE == 64) ? __ffsll(bmask) - 1
-                                   : __ffs((unsigned int)bmask) - 1;
+#if WAVEFRONT_SIZE == 64
+    int i = __ffsll(bmask) - 1;
+#else
+    int i = __ffs((unsigned int)bmask) - 1;
+#endif
 
     if (i < 0) break;
 
@@ -323,8 +327,11 @@ __device__ inline lane_mask __match_any_sync(lane_mask mask, T value) {
 #endif
 
   while (1) {
-    int i = (WAVEFRONT_SIZE == 64) ? __ffsll(bmask) - 1
-                                   : __ffs((unsigned int)bmask) - 1;
+#if WAVEFRONT_SIZE == 64
+    int i = __ffsll(bmask) - 1;
+#else
+    int i = __ffs((unsigned int)bmask) - 1;
+#endif
 
     if (i < 0) break;
 
