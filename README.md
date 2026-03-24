@@ -46,64 +46,27 @@ docker run \
 - PyTorch >= 2.6.0
 
 ```bash
-# setup your environment to make ROCm and PyTorch visible
-python3 -m ven dgl_venv
-source dgl_venv/bin/activate
-pip3 install cython scipy pandas tqdm pytest pydantic
-export AMDGPU_TARGETS=gfx942 // change this as needed 
-export PYTORCH_ROCM_ARCH=$AMDGPU_TARGETS
-export ROCM_PATH=/opt/rocm // change this as needed 
-export PATH=$ROCM_PATH/bin:$PATH
-
-# note, the above might be set with:
-module load rocm pytorch
-# on a system where modules are used.
-
-# install dependencies
-export LIBHIPCXX_BRANCH=therock-7.11 // change as needed 
-git clone -b $LIBHIPCXX_BRANCH https://github.com/ROCm/libhipcxx.git
-
-cd libhipcxx && mkdir build && cd build
-
-export LIBHIPCXX_PATH=$HOME/libhipcxx_install // set to user desired path
-
-cmake -DCMAKE_PREFIX_PATH=$LIBHIPCXX_PATH -DCMAKE_CXX_COMPILER=`which amdclang++` -DCMAKE_C_COMPILER=`which amdclang` -DCMAKE_HIP_ARCHITECTURES=$AMDGPU_TARGETS -DGPU_TARGETS=$AMDGPU_TARGETS -DLIBCUDACXX_ENABLE_LIBCUDACXX_TESTS=OFF  -DUSE_LIBXSMM=OFF ..
-
-cd ../..
-
-export libhipcxx_DIR=$LIBHIPCXX_PATH
-
-export HIPCOLL_BRANCH=release/rocmds-25.10 // change as needed
-git clone -b $HIPCOLL_BRANCH https://github.com/ROCm/hipCollections.git
-
-export HIPCOLL_PATH=$HOME/hipcoll_install // set to user defined path
-
-cd hipColections && mkdir build && cd build
-
-cmake  -DCMAKE_INSTALL_PREFIX=$HIPCOLL_PATH -DINSTALL_CUCO=ON -DBUILD_TESTS=OFF -DBUILD_BENCHMARKS=OFF -DBUILD_EXAMPLES=OFF  -DCMAKE_CXX_COMPILER=`which amdclang++` ..
-
-export hipCCL_DIR=$HIPCOLL_PATH
-
-cd ../..
-
+# get the code
 git clone --recurse-submodules https://github.com/ROCm/dgl
+cd dgl
 
-export DGL_PATH=$HOME/dgl_install
+# install graphbolt dependencies
+mkdir -p deps
+cd deps
+bash ../script/install_graphbolt_deps.sh
+cd ..
 
-cd dgl && mkdir build && cd build
+# build dgl
+cmake --preset rocm <OPTIONAL_CMAKE_ARGS>
+cmake --build build
 
-cmake  -DCMAKE_INSTALL_PREFIX=$DGL_PATH -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DUSE_HIP=ON -DCMAKE_HIP_ARCHITECTURES=$AMDGPU_TARGETS -DGPU_TARGETS=gfx942   -DCMAKE_CXX_COMPILER=`which amdclang++` -DCMAKE_C_COMPILER=`which amdclang` -DCMAKE_PREFIX_PATH=${hipCCL_DIR}/lib/cmake/cuco ..
-
-cd ../python
-
-pip3 install . --target=$DGL_PATH --no-deps --no-build-isolation
-export PYTHONPATH=$DGL_PATH:$PYTHONPATH
-
-cd ../..
+# install the python bindings (should be done inside a virtual env)
+cd python
+python -m pip install -e .
+python -m build --wheel
 
 # Check installation with python tests
 bash tests/scripts/task_unit_test_rocm.sh pytorch gpu
-deactivate
 ```
 
 <p align="center">
